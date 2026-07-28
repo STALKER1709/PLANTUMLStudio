@@ -1,0 +1,41 @@
+' Diagramme de composants — briques logicielles et interfaces échangées
+@startuml
+title Architecture applicative — composants
+
+package "Poste de travail" {
+  [Interface React] as UI
+  [Éditeur Monaco] as Editeur
+}
+
+package "Processus principal" {
+  [Contrôleur IPC] as IPC
+  [Service PlantUML] as Moteur
+  [Service Fichiers] as Fichiers
+  [Service Export] as Export
+}
+
+package "Ressources embarquées" {
+  [plantuml.jar] as Jar
+  [JRE] as Jre
+  [Graphviz] as Graphviz
+}
+
+interface "API contextBridge" as API
+interface "stdin / stdout" as Pipe
+
+UI -down- API
+API -down- IPC
+Editeur -right-> UI
+
+IPC --> Moteur
+IPC --> Fichiers
+IPC --> Export
+
+Moteur -down- Pipe
+Pipe -down- Jar
+Jar ..> Jre : exécuté par
+Jar ..> Graphviz : mise en page
+
+Export --> Moteur : réutilise le rendu SVG
+
+@enduml

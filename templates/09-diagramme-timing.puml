@@ -1,0 +1,40 @@
+' Diagramme de temps — évolution des états en fonction du temps
+@startuml
+title Génération d'un diagramme — chronologie
+
+robust "Éditeur" as Editeur
+concise "Processus principal" as Main
+robust "Moteur Java" as Java
+
+@0
+Editeur is Repos
+Main is Inactif
+Java is Arrete
+
+@100
+Editeur is Saisie
+note top of Editeur : L'utilisateur tape du code
+
+@500
+Editeur is Attente
+Main is "Requête IPC"
+note bottom of Main : Debounce de 400 ms écoulé
+
+@550
+Java is Demarrage
+
+@700
+Java is Rendu
+
+@1200
+Java is Arrete
+Main is "Réponse IPC"
+
+@1250
+Editeur is Affichage
+Main is Inactif
+
+@1500
+Editeur is Repos
+
+@enduml

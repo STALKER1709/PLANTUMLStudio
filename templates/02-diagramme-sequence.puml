@@ -1,0 +1,41 @@
+' Diagramme de séquence — échanges chronologiques entre participants
+@startuml
+title Authentification d'un utilisateur
+
+actor Utilisateur as U
+participant "Interface web" as UI
+participant "Service Auth" as Auth
+database "Base utilisateurs" as DB
+
+autonumber "<b>[00]"
+
+U -> UI : saisit identifiant et mot de passe
+activate UI
+
+UI -> Auth : authentifier(identifiant, motDePasse)
+activate Auth
+
+Auth -> DB : rechercherUtilisateur(identifiant)
+activate DB
+DB --> Auth : utilisateur
+deactivate DB
+
+alt mot de passe valide
+  Auth -> Auth : genererJeton()
+  Auth --> UI : jeton de session
+  UI --> U : accès au tableau de bord
+else mot de passe invalide
+  Auth --> UI : erreur 401
+  UI --> U : message « identifiants incorrects »
+end
+
+deactivate Auth
+deactivate UI
+
+note over Auth, DB
+  Le mot de passe n'est jamais
+  stocké en clair : seule une
+  empreinte est comparée.
+end note
+
+@enduml

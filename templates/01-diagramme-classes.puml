@@ -1,0 +1,58 @@
+' Diagramme de classes — structure statique : classes, attributs, méthodes et relations
+@startuml
+title Gestion de commandes — diagramme de classes
+
+' « skinparam » ajuste l'apparence sans toucher au contenu du modèle
+skinparam classAttributeIconSize 0
+
+class Client {
+  - identifiant : UUID
+  - nom : String
+  - courriel : String
+  + passerCommande(panier : Panier) : Commande
+}
+
+class Commande {
+  - numero : String
+  - date : LocalDate
+  - statut : StatutCommande
+  + total() : Decimal
+}
+
+class LigneCommande {
+  - quantite : int
+  - prixUnitaire : Decimal
+  + sousTotal() : Decimal
+}
+
+class Produit {
+  - reference : String
+  - libelle : String
+  - prix : Decimal
+}
+
+enum StatutCommande {
+  BROUILLON
+  VALIDEE
+  EXPEDIEE
+  ANNULEE
+}
+
+interface Facturable {
+  + genererFacture() : Facture
+}
+
+' Relations : 1 client possède 0..n commandes
+Client "1" -- "0..*" Commande : passe >
+Commande "1" *-- "1..*" LigneCommande : contient >
+LigneCommande "0..*" --> "1" Produit : référence >
+Commande ..|> Facturable
+Commande --> StatutCommande
+
+note right of LigneCommande
+  Le prix unitaire est figé à la
+  commande : il ne suit pas les
+  évolutions du catalogue.
+end note
+
+@enduml

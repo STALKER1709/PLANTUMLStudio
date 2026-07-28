@@ -1,0 +1,34 @@
+' Diagramme d'états — cycle de vie et transitions d'un objet
+@startuml
+title Cycle de vie d'une commande
+
+[*] --> Brouillon
+
+state Brouillon {
+  [*] --> PanierVide
+  PanierVide --> PanierRempli : ajouterArticle()
+  PanierRempli --> PanierVide : viderPanier()
+}
+
+Brouillon --> Validee : valider() [panier non vide]
+Validee --> Payee : encaisser()
+Payee --> Preparee : preparer()
+Preparee --> Expediee : expedier()
+Expediee --> Livree : accuserReception()
+Livree --> [*]
+
+Validee --> Annulee : annuler()
+Payee --> Remboursee : rembourser()
+Annulee --> [*]
+Remboursee --> [*]
+
+state Expediee : entry / envoyer notification
+state Expediee : exit / clore le suivi
+
+note right of Annulee
+  Une commande expédiée ne peut
+  plus être annulée : seul un
+  remboursement reste possible.
+end note
+
+@enduml

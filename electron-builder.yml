@@ -1,0 +1,64 @@
+appId: com.plantumlstudio.app
+productName: PlantUML Studio
+copyright: © 2025 PlantUML Studio
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - package.json
+  - '!**/*.map'
+
+# Ressources non empaquetées dans l'asar : plantuml.jar doit rester un fichier
+# accessible au processus Java, et les modèles sont lus tels quels.
+extraResources:
+  - from: resources/
+    to: resources/
+    filter:
+      - '**/*'
+      - '!**/.gitkeep'
+  - from: templates/
+    to: templates/
+
+asar: true
+compression: maximum
+
+win:
+  target: nsis
+  icon: build/icon.ico
+  artifactName: ${productName}-${version}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  language: '1036' # français
+  installerLanguages:
+    - fr_FR
+    - en_US
+
+mac:
+  target: dmg
+  icon: build/icon.icns
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+
+linux:
+  target:
+    - deb
+    - rpm
+    - AppImage
+  icon: build/icon.png
+  category: Development
+  desktop:
+    entry:
+      Name: PlantUML Studio
+      Comment: Éditeur de diagrammes UML 100 % hors ligne
+      Categories: Development;IDE;
+
+# Aucune publication automatique : les mises à jour se font par installateur
+# transmis hors ligne (clé USB, partage local).
+publish: null

@@ -1,0 +1,45 @@
+' Diagramme d'objets — instantané d'instances à un moment donné
+@startuml
+title Instantané — commande n° 2024-0157
+
+object "client : Client" as client {
+  identifiant = "3f2a-91cd"
+  nom = "Dupont"
+  courriel = "m.dupont@exemple.fr"
+}
+
+object "commande : Commande" as commande {
+  numero = "2024-0157"
+  date = 2024-11-05
+  statut = VALIDEE
+}
+
+object "ligne1 : LigneCommande" as ligne1 {
+  quantite = 2
+  prixUnitaire = 19.90
+}
+
+object "ligne2 : LigneCommande" as ligne2 {
+  quantite = 1
+  prixUnitaire = 249.00
+}
+
+object "clavier : Produit" as clavier {
+  reference = "KB-104"
+  libelle = "Clavier mécanique"
+  prix = 19.90
+}
+
+object "ecran : Produit" as ecran {
+  reference = "SC-27"
+  libelle = "Écran 27 pouces"
+  prix = 249.00
+}
+
+client -- commande
+commande *-- ligne1
+commande *-- ligne2
+ligne1 --> clavier
+ligne2 --> ecran
+
+@enduml
