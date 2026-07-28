@@ -3,6 +3,7 @@
   "productName": "PlantUML Studio",
   "version": "0.1.0",
   "description": "Application desktop 100% offline pour créer des diagrammes UML avec PlantUML",
+  "author": "PlantUML Studio",
   "license": "MIT",
   "private": true,
   "main": "dist/main/index.js",
