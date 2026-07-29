@@ -137,6 +137,12 @@ Visiteur <|-[norank]- Client
 Un acteur secondaire (service externe, API) reste **hors** du `together` : il se place alors
 naturellement du côté opposé, comme dans la notation habituelle.
 
+### Une conséquence de `style strictuml`
+
+Ce réglage supprime le **pied** des diagrammes de séquence — la reprise des
+participants sous les lignes de vie. UML ne l'exige pas, et son absence allège le
+diagramme ; c'est néanmoins un effet à connaître, car il ne se déduit pas du nom du réglage.
+
 ## 1 ter. Éditer le rendu
 
 La disposition calculée peut être retouchée **à la souris**, sans toucher au texte.
@@ -200,6 +206,54 @@ Ce que cela suppose, et ce que cela implique :
   rendu affiché — SVG et PDF depuis le texte SVG, PNG rastérisé par l'application — au lieu de
   régénérer depuis la source.
 - **La zone visible s'agrandit** pour accueillir un élément tiré au-delà du cadre calculé.
+
+## 1 quater. Optimiser la disposition
+
+Le bouton **« Optimiser »** de la prévisualisation cherche une disposition plus lisible et
+l'applique sous forme de déplacements — les mêmes que ceux de l'édition à la souris, donc
+annulables d'un clic et conservés à l'export.
+
+### Ce qu'il optimise
+
+La mise en page vient de Graphviz, qui raisonne sur le **graphe** : il minimise les croisements
+avant de connaître les dimensions définitives des boîtes, et ne voit jamais la géométrie finale.
+Il reste donc, après coup, des défauts visibles. L'optimisation part de cette mise en page et
+évalue ce qui est **réellement dessiné** :
+
+| Défaut | Ce qui est compté |
+| --- | --- |
+| Croisement | deux liens qui se coupent, sans partager d'extrémité |
+| Frôlement | deux liens distants de moins de 8 unités sans se couper |
+| Traversée | un lien qui entre dans un élément qu'il ne relie pas |
+| Chevauchement | deux éléments qui se recouvrent, ou séparés de moins de 16 unités |
+
+Un lien dont aucune extrémité n'a bougé est évalué sur **la courbe de PlantUML**, celle qui est
+à l'écran ; les autres sur le segment qui les remplacera. Sans cette distinction, le score
+compterait des croisements qui n'existent pas et manquerait ceux qui existent.
+
+### Comment il cherche
+
+Une recherche locale déterministe : à chaque passe, tous les déplacements candidats — huit
+directions, trois amplitudes — sont évalués et **le meilleur** est appliqué ; on s'arrête dès
+qu'aucun n'améliore le score.
+
+L'esprit est de **réparer au moindre coût, jamais de reconstruire**. La mise en page de Graphviz
+encode une hiérarchie — rangs, sens de lecture — que ce score ne sait pas voir : s'en écarter est
+donc en soi une perte, facturée par un terme de déplacement. Et seul l'**allongement** des tracés
+est pénalisé, jamais leur longueur absolue : facturer celle-ci reviendrait à récompenser le
+tassement, et la recherche empilerait les éléments pour raccourcir les traits.
+
+Les regroupements ne sont pas déplacés : ils emmèneraient leur contenu, et l'optimisation
+reviendrait à faire glisser des pans entiers du diagramme.
+
+### Ce que cela donne
+
+Mesuré sur 17 diagrammes — les 14 modèles livrés et trois diagrammes denses — **11 défauts
+tombent à 2**, en 206 ms cumulées, sans qu'aucun diagramme ne soit dégradé. Les diagrammes déjà
+sans défaut ne sont pas touchés du tout.
+
+Au-delà de 60 éléments, la recherche est abandonnée plutôt que de figer l'interface, et
+l'application le dit.
 
 ## 2. Les 7 diagrammes du document
 

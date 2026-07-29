@@ -364,6 +364,28 @@ export function indexEntities(root: SVGSVGElement): Map<string, EntityHandle> {
 }
 
 /**
+ * Liens du diagramme, avec le tracé d'origine calculé par PlantUML.
+ *
+ * Le tracé est lu dans sa version mémorisée : après un premier déplacement,
+ * l'attribut `d` porte la géométrie réécrite, pas celle de PlantUML.
+ */
+export function indexLinks(
+  root: SVGSVGElement
+): Array<{ from: string; to: string; path: Point[] }> {
+  return Array.from(root.querySelectorAll<SVGGElement>('g.link[data-entity-1]'))
+    .map((link) => {
+      const principal = link.querySelector<SVGPathElement>('path');
+      const data = principal ? readOriginal(principal, ORIGINAL_PATH, 'd') : null;
+      return {
+        from: link.getAttribute('data-entity-1') ?? '',
+        to: link.getAttribute('data-entity-2') ?? '',
+        path: data ? pathPoints(data) : [],
+      };
+    })
+    .filter((lien) => lien.from !== '' && lien.to !== '');
+}
+
+/**
  * Applique les décalages au SVG rendu : les éléments sont translatés, et les
  * liens qui les touchent sont réécrits pour rester accrochés.
  *

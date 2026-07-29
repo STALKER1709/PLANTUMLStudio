@@ -12,7 +12,9 @@ import { useTranslation } from './i18n';
 import { useEditorStore } from './store/editorStore';
 import { useProjectStore } from './store/projectStore';
 import { useSettingsStore } from './store/settingsStore';
+import { useToastStore } from './store/toastStore';
 import { applyTheme } from './styles/themes';
+import { countDefects, type OptimizeResult } from './utils/layoutOptimizer';
 
 export function App() {
   const { t } = useTranslation();
@@ -29,6 +31,7 @@ export function App() {
   const consumeRevealLine = useEditorStore((state) => state.consumeRevealLine);
   const layoutOffsets = useEditorStore((state) => state.layoutOffsets);
   const moveElement = useEditorStore((state) => state.moveElement);
+  const applyLayout = useEditorStore((state) => state.applyLayout);
   const resetLayout = useEditorStore((state) => state.resetLayout);
 
   const saveCurrentFile = useProjectStore((state) => state.saveCurrentFile);
@@ -40,6 +43,31 @@ export function App() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // L'optimisation rend compte de ce qu'elle a gagné : sans cela, l'utilisateur
+  // ne saurait pas distinguer « aucun défaut trouvé » de « rien n'a marché ».
+  const handleOptimizeLayout = useCallback(
+    (result: OptimizeResult) => {
+      const defautsAvant = countDefects(result.before);
+      const defautsApres = countDefects(result.after);
+
+      if (result.skipped) {
+        useToastStore.getState().push('info', t('toast.layoutTooLarge'));
+        return;
+      }
+      if (result.moves === 0) {
+        useToastStore.getState().push('info', t('toast.layoutAlreadyGood'));
+        return;
+      }
+
+      applyLayout(result.offsets);
+      useToastStore.getState().push(
+        'success',
+        t('toast.layoutOptimized', { before: defautsAvant, after: defautsApres })
+      );
+    },
+    [applyLayout, t]
+  );
 
   // Ctrl+S fonctionne aussi lorsque le focus est hors de Monaco.
   useEffect(() => {
@@ -107,6 +135,7 @@ export function App() {
             applyFormalism={applyFormalism}
             layoutOffsets={layoutOffsets}
             onMoveElement={moveElement}
+            onOptimizeLayout={handleOptimizeLayout}
             onResetLayout={resetLayout}
             onGotoLine={requestRevealLine}
           />

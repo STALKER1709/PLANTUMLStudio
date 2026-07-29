@@ -30,6 +30,17 @@ test.afterAll(async () => {
 });
 
 /**
+ * Le réglage est mémorisé d'une session à l'autre : sans le remettre dans son
+ * état par défaut, un test dépendrait de ce qu'une exécution précédente a
+ * laissé — et pourrait passer pour une mauvaise raison.
+ */
+async function activerFormalisme(): Promise<void> {
+  const bouton = window.locator('button', { hasText: /^Formalisme$/ });
+  if ((await bouton.getAttribute('aria-pressed')) !== 'true') await bouton.click();
+  await expect(bouton).toHaveAttribute('aria-pressed', 'true');
+}
+
+/**
  * Le bouton bascule, et les tests partagent la même fenêtre : cliquer sans
  * regarder l'état désactiverait l'édition laissée active par le test précédent.
  */
@@ -65,6 +76,8 @@ test('la saisie de code PlantUML produit un aperçu SVG', async () => {
 test('une syntaxe invalide affiche le panneau d’erreurs en français', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
 
+  await activerFormalisme();
+
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
   await window.keyboard.press('Control+A');
@@ -85,6 +98,8 @@ test('un brouillon édité peut être enregistré via « Enregistrer sous »', a
   await app.evaluate(({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath });
   }, chosenPath);
+
+  await activerFormalisme();
 
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
@@ -131,6 +146,8 @@ test("une écriture hors des chemins désignés reste refusée", async () => {
 test('les flèches se réajustent quand un élément change de côté', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
 
+  await activerFormalisme();
+
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
   await window.keyboard.press('Control+A');
@@ -168,6 +185,8 @@ test('les flèches se réajustent quand un élément change de côté', async ()
 
 test('un paquetage déplacé emmène son contenu et ses liens', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
 
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
@@ -216,6 +235,8 @@ test('un paquetage déplacé emmène son contenu et ses liens', async () => {
 test('un participant de séquence se règle en abscisse, messages compris', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
 
+  await activerFormalisme();
+
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
   await window.keyboard.press('Control+A');
@@ -234,6 +255,11 @@ test('un participant de séquence se règle en abscisse, messages compris', asyn
     await trait.getAttribute('x1'),
     await trait.getAttribute('x2'),
   ];
+  // Le pied de diagramme n'existe pas toujours — « style strictuml » le
+  // supprime — mais tout ce qui porte le participant doit suivre.
+  const morceaux = window.locator('[data-participant="B"]');
+  const nombreDeMorceaux = await morceaux.count();
+  expect(nombreDeMorceaux, 'au moins la tête et la ligne de vie').toBeGreaterThanOrEqual(2);
 
   const boite = await tete.boundingBox();
   if (!boite) throw new Error('participant introuvable');
@@ -245,11 +271,12 @@ test('un participant de séquence se règle en abscisse, messages compris', asyn
   });
   await window.mouse.up();
 
-  // Tête, pied et ligne de vie se déplacent ensemble, et seulement en abscisse.
+  // Tous les morceaux du participant se déplacent ensemble, et seulement en
+  // abscisse : la chronologie n'est pas touchée.
   await expect(tete).toHaveAttribute('transform', 'translate(150,0)');
-  await expect(
-    window.locator('g.participant.participant-tail[data-participant="B"]')
-  ).toHaveAttribute('transform', 'translate(150,0)');
+  for (let index = 0; index < nombreDeMorceaux; index += 1) {
+    await expect(morceaux.nth(index)).toHaveAttribute('transform', 'translate(150,0)');
+  }
 
   // Le message s'allonge du côté déplacé, et de lui seul.
   expect(Number(await trait.getAttribute('x1'))).toBeCloseTo(Number(avantDebut), 1);
@@ -258,6 +285,8 @@ test('un participant de séquence se règle en abscisse, messages compris', asyn
 
 test('un lien contourne l’élément qu’on pose sur sa route', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
 
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
@@ -298,6 +327,44 @@ test('un lien contourne l’élément qu’on pose sur sa route', async () => {
   // Le détour comporte au moins un coude entre les deux extrémités.
   const sommets = [...apres.matchAll(/([-\d.]+),([-\d.]+)/g)];
   expect(sommets.length, 'le tracé passe par au moins un point de dégagement').toBeGreaterThan(2);
+});
+
+test('« Optimiser » corrige la disposition et rend compte du gain', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  // B est déclaré entre A et C : PlantUML l'aligne au milieu, et le lien A→C
+  // le traverse.
+  await window.keyboard.type('@startuml\nclass A\nclass B\nclass C\nA --> C\nA --> B\n@enduml');
+  await expect(window.locator('.preview-stage svg g.link').first()).toBeVisible({
+    timeout: 30_000,
+  });
+
+  const positionAvant = await window
+    .locator('g.entity[data-entity="B"]')
+    .getAttribute('transform');
+  expect(positionAvant, 'aucun déplacement au départ').toBeNull();
+
+  await window.locator('button', { hasText: /^Optimiser$/ }).click();
+
+  // Le message rend compte du nombre de défauts avant et après.
+  const toast = window.locator('.toast');
+  await expect(toast).toBeVisible({ timeout: 20_000 });
+  const message = (await toast.textContent()) ?? '';
+  expect(message).toMatch(/Disposition optimisée : (\d+) défauts → (\d+)\.|Disposition déjà/);
+
+  if (/optimisée/.test(message)) {
+    const [, avant, apres] = message.match(/(\d+) défauts → (\d+)/) ?? [];
+    expect(Number(apres), 'le score annoncé doit être meilleur').toBeLessThan(Number(avant));
+
+    // Le compteur d'annulation apparaît : l'optimisation est un déplacement
+    // comme un autre, réversible d'un clic.
+    await expect(window.locator('button', { hasText: /^↺ \d+$/ })).toBeVisible();
+  }
 });
 
 test("l'application ne déclenche aucune requête réseau", async () => {

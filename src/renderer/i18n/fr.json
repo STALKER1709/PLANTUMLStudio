@@ -44,6 +44,11 @@
   "preview.empty": "Écrivez du code PlantUML pour voir le diagramme apparaître ici.",
   "preview.edit": "Éditer",
   "preview.editHint": "Déplacer les éléments du diagramme à la souris ; un paquetage emmène son contenu. La source n'est pas modifiée.",
+  "preview.optimize": "Optimiser",
+  "preview.optimizeHint": "Chercher une disposition plus lisible : moins de croisements, de flèches qui se touchent et d'éléments traversés. La source n'est pas modifiée.",
+  "toast.layoutOptimized": "Disposition optimisée : {before} défauts → {after}.",
+  "toast.layoutAlreadyGood": "Disposition déjà optimale : aucun déplacement ne l’améliore.",
+  "toast.layoutTooLarge": "Diagramme trop grand pour l’optimisation automatique.",
   "preview.resetLayout": "Annuler tous les déplacements",
   "preview.duration": "Généré en {ms} ms",
 

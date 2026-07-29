@@ -26,6 +26,8 @@ interface EditorState {
   requestRevealLine(line: number): void;
   consumeRevealLine(): void;
   moveElement(id: string, offset: Point): void;
+  /** Remplace tous les décalages d'un coup — résultat d'une optimisation. */
+  applyLayout(offsets: LayoutOffsets): void;
   resetLayout(): void;
 }
 
@@ -63,6 +65,8 @@ export const useEditorStore = create<EditorState>()((set) => ({
 
   moveElement: (id, offset) =>
     set((state) => ({ layoutOffsets: { ...state.layoutOffsets, [id]: offset } })),
+
+  applyLayout: (offsets) => set({ layoutOffsets: offsets }),
 
   resetLayout: () => set({ layoutOffsets: {} }),
 }));

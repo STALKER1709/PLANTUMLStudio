@@ -44,6 +44,11 @@
   "preview.empty": "Write some PlantUML code to see the diagram appear here.",
   "preview.edit": "Edit",
   "preview.editHint": "Drag diagram elements with the mouse; a package carries its contents along. The source is left untouched.",
+  "preview.optimize": "Optimise",
+  "preview.optimizeHint": "Look for a more readable layout: fewer crossings, touching arrows and elements cut through. The source is left untouched.",
+  "toast.layoutOptimized": "Layout optimised: {before} defects → {after}.",
+  "toast.layoutAlreadyGood": "Layout already optimal: no move improves it.",
+  "toast.layoutTooLarge": "Diagram too large for automatic optimisation.",
   "preview.resetLayout": "Undo every move",
   "preview.duration": "Rendered in {ms} ms",
 

@@ -17,6 +17,10 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
   paquetage, qui **emmène tout ce qu'il contient** — pendant que les flèches sont recalculées et
   déviées pour ne traverser ni un élément ni une autre flèche ; la source reste intacte et
   l'export conserve les déplacements
+- **Optimisation de la disposition** : le bouton « Optimiser » évalue la géométrie réellement
+  dessinée — croisements, flèches qui se frôlent, éléments traversés — et cherche par
+  déplacements successifs une disposition plus lisible. Mesuré sur 17 diagrammes : **11 défauts
+  ramenés à 2**, en 206 ms cumulées, sans jamais dégrader un diagramme déjà propre
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))

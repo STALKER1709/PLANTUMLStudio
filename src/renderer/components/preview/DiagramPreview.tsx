@@ -5,7 +5,13 @@ import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../../../shared/constants';
 import { useDebouncedRender } from '../../hooks/useDebouncedRender';
 import { GRABBABLE, useDiagramEditing } from '../../hooks/useDiagramEditing';
 import { useTranslation } from '../../i18n';
-import type { LayoutOffsets, Point } from '../../utils/diagramLayout';
+import {
+  indexEntities,
+  indexLinks,
+  type LayoutOffsets,
+  type Point,
+} from '../../utils/diagramLayout';
+import { optimizeLayout, type OptimizeResult } from '../../utils/layoutOptimizer';
 import { readSvgSize, sanitizeSvg } from '../../utils/sanitizeSvg';
 import { ErrorPanel } from '../common/ErrorPanel';
 import { ZoomPanControls } from './ZoomPanControls';
@@ -19,6 +25,8 @@ export interface DiagramPreviewProps {
   /** Déplacements appliqués aux éléments du diagramme. */
   layoutOffsets: LayoutOffsets;
   onMoveElement(id: string, offset: Point): void;
+  /** Reçoit la disposition trouvée, et de quoi en rendre compte. */
+  onOptimizeLayout(result: OptimizeResult): void;
   onResetLayout(): void;
   onGotoLine(line: number): void;
 }
@@ -35,6 +43,7 @@ export function DiagramPreview({
   applyFormalism,
   layoutOffsets,
   onMoveElement,
+  onOptimizeLayout,
   onResetLayout,
   onGotoLine,
 }: DiagramPreviewProps) {
@@ -67,6 +76,49 @@ export function DiagramPreview({
   });
 
   const deplacements = Object.keys(layoutOffsets).length;
+
+  const [isOptimizing, setIsOptimizing] = useState(false);
+
+  /**
+   * Cherche une disposition plus lisible, à partir de celle que PlantUML vient
+   * de calculer et des déplacements déjà faits à la main.
+   *
+   * La recherche est synchrone et peut durer quelques centaines de
+   * millisecondes : le rendu du bouton est laissé au navigateur avant de la
+   * lancer, faute de quoi l'interface se figerait sans rien signaler.
+   */
+  const optimize = useCallback(() => {
+    if (!stageRef.current?.querySelector('svg')) return;
+
+    setIsOptimizing(true);
+    requestAnimationFrame(() => {
+      try {
+        // Le SVG est retrouvé ici, et non avant : passer `isOptimizing` à vrai
+        // provoque un rendu qui remplace le sous-arbre, et `getBBox` d'un nœud
+        // détaché ne renvoie que des zéros — l'optimisation partirait alors de
+        // boîtes vides, donc toutes superposées.
+        const svg = stageRef.current?.querySelector('svg') as SVGSVGElement | null;
+        if (!svg) return;
+
+        const entities = indexEntities(svg);
+        const resultat = optimizeLayout(
+          {
+            nodes: Array.from(entities.values()).map((entity) => ({
+              id: entity.id,
+              box: entity.box,
+              ellipse: entity.ellipse,
+              container: entity.container,
+            })),
+            links: indexLinks(svg),
+          },
+          layoutOffsets
+        );
+        onOptimizeLayout(resultat);
+      } finally {
+        setIsOptimizing(false);
+      }
+    });
+  }, [layoutOffsets, onOptimizeLayout, stageRef]);
 
   const changeZoom = useCallback((delta: number) => {
     setZoom((previous) => clamp(Number((previous + delta).toFixed(2)), ZOOM_MIN, ZOOM_MAX));
@@ -145,6 +197,14 @@ export function DiagramPreview({
           onClick={() => setIsEditing((actif) => !actif)}
         >
           {t('preview.edit')}
+        </button>
+        <button
+          type="button"
+          disabled={!safeSvg || isOptimizing}
+          title={t('preview.optimizeHint')}
+          onClick={optimize}
+        >
+          {t('preview.optimize')}
         </button>
         {deplacements > 0 && (
           <button type="button" onClick={onResetLayout} title={t('preview.resetLayout')}>
