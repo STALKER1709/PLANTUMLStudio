@@ -47,6 +47,10 @@ skinparam shadowing false
 ' Cette directive exige Graphviz ; le moteur Smetana l'ignore et trace des
 ' courbes, sans que le diagramme cesse d'être correct.
 skinparam linetype ortho
+
+' Espacement des éléments : des rangs trop serrés font se toucher les traits.
+skinparam nodesep 70
+skinparam ranksep 110
 ' Les conteneurs (cadre système, paquetages, nœuds) restent transparents :
 ' seuls les éléments qu'ils portent sont colorés, comme dans le formalisme de
 ' référence.

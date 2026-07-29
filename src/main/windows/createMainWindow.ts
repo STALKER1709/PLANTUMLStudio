@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { BrowserWindow, shell } from 'electron';
@@ -12,10 +13,17 @@ export interface CreateMainWindowOptions {
   isDevelopment: boolean;
   /** Racine des fichiers compilés (`dist/`). */
   distPath: string;
+  /**
+   * Icône de la fenêtre et de la barre des tâches. Sans elle, Electron affiche
+   * la sienne : la configuration d'electron-builder ne vaut que pour
+   * l'exécutable installé, jamais pour la fenêtre en développement.
+   */
+  iconPath?: string | null;
 }
 
 export function createMainWindow(options: CreateMainWindowOptions): BrowserWindow {
   const window = new BrowserWindow({
+    ...(options.iconPath && fs.existsSync(options.iconPath) ? { icon: options.iconPath } : {}),
     width: 1440,
     height: 900,
     minWidth: 960,

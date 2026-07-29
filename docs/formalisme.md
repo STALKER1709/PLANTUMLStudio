@@ -82,6 +82,42 @@ copiez `templates/_formalisme.puml` à la racine de votre projet puis
 `!include _formalisme.puml` — les inclusions sont autorisées dans le dossier du projet ouvert,
 et nulle part ailleurs.
 
+## 1 bis. Maîtriser la disposition
+
+PlantUML calcule seul le placement. Trois leviers suffisent à obtenir une disposition proche
+de celle d'un outil à placement manuel — les deux premiers sont déjà dans le formalisme commun,
+le troisième s'écrit dans votre source.
+
+| Levier | Effet | Où |
+| --- | --- | --- |
+| `nodesep 70` / `ranksep 110` | écarte les rangs : sans marge, les traits se touchent | formalisme commun |
+| `linetype ortho` | connecteurs à angles droits | formalisme commun |
+| `together { … }` | maintient un groupe d'éléments sur un même axe | votre source |
+| `[norank]` sur un lien | dessine le lien sans le laisser imposer un rang | votre source |
+
+### Aligner les acteurs d'un diagramme de cas d'utilisation
+
+Deux pièges se conjuguent : les acteurs se dispersent au gré de leurs liens, et une
+généralisation entre acteurs en extrait un de la colonne.
+
+```plantuml
+left to right direction
+
+' 1. Les acteurs restent sur un même axe vertical.
+together {
+  actor "Visiteur" as Visiteur
+  actor "Client inscrit" as Client
+  actor "Administrateur" as Admin
+}
+
+' 2. La généralisation est dessinée sans imposer de rang :
+'    sans [norank], le visiteur sort de la colonne.
+Visiteur <|-[norank]- Client
+```
+
+Un acteur secondaire (service externe, API) reste **hors** du `together` : il se place alors
+naturellement du côté opposé, comme dans la notation habituelle.
+
 ## 2. Les 7 diagrammes du document
 
 ### 2.1 Cas d'utilisation — `08-diagramme-cas-utilisation.puml`

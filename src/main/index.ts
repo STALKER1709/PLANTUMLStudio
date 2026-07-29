@@ -30,6 +30,14 @@ const isDevelopment =
   process.env.NODE_ENV === 'development' ||
   (!app.isPackaged && !fs.existsSync(path.join(distPath, 'renderer', 'index.html')));
 
+/**
+ * Icône de la fenêtre. Empaquetée, elle est copiée à la racine des ressources ;
+ * en développement, elle est lue directement dans `build/icons/`.
+ */
+const iconPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'icon.png')
+  : path.join(projectRoot, 'build', 'icons', '256x256.png');
+
 let mainWindow: BrowserWindow | null = null;
 
 // Une seule instance : deux fenêtres écrivant dans le même projet mèneraient
@@ -93,7 +101,7 @@ app.whenReady().then(async () => {
 
     blockNetworkRequests();
 
-    mainWindow = createMainWindow({ isDevelopment, distPath });
+    mainWindow = createMainWindow({ isDevelopment, distPath, iconPath });
     mainWindow.on('closed', () => {
       mainWindow = null;
     });
@@ -130,7 +138,7 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (mainWindow === null) {
-    mainWindow = createMainWindow({ isDevelopment, distPath });
+    mainWindow = createMainWindow({ isDevelopment, distPath, iconPath });
     mainWindow.on('closed', () => {
       mainWindow = null;
     });

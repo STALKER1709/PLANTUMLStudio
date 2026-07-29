@@ -24,6 +24,9 @@ extraResources:
       - '!**/.gitkeep'
   - from: templates/
     to: templates/
+  # Icône lue à l'exécution pour la fenêtre et la barre des tâches.
+  - from: build/icons/256x256.png
+    to: icon.png
 
 asar: true
 compression: maximum
