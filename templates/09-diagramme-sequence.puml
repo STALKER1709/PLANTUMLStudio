@@ -3,11 +3,59 @@
 @startuml
 title Authentification d'un utilisateur
 
-skinparam defaultFontName "Segoe UI"
-skinparam defaultFontSize 12
+' ── Formalisme commun — voir docs/formalisme.md ──────────────────────
+' Palette : fond cyan clair, bordures et flèches bleues, têtes d'acteurs
+' en jaune pâle. Les états initiaux et finaux restent des cercles pleins.
+<style>
+root {
+  FontName "Segoe UI"
+  FontSize 12
+  BackGroundColor #FFFFFF
+  LineColor #1E90FF
+  LineThickness 1.5
+}
+element {
+  BackGroundColor #D9F6FB
+  LineColor #1E90FF
+  FontColor #10314A
+}
+arrow {
+  LineColor #1E90FF
+  FontColor #333333
+}
+activityDiagram {
+  circle {
+    BackGroundColor #1E90FF
+    LineColor #1E90FF
+  }
+}
+stateDiagram {
+  circle {
+    BackGroundColor #1E90FF
+    LineColor #1E90FF
+  }
+}
+</style>
 skinparam shadowing false
-' Notation stricte : pointe pleine = synchrone, pointe fine = asynchrone.
+' Les conteneurs (cadre système, paquetages, nœuds) restent transparents :
+' seuls les éléments qu'ils portent sont colorés, comme dans le formalisme de
+' référence.
+skinparam rectangleBackgroundColor transparent
+skinparam packageBackgroundColor transparent
+skinparam nodeBackgroundColor transparent
+skinparam folderBackgroundColor transparent
+skinparam frameBackgroundColor transparent
+skinparam cloudBackgroundColor transparent
+skinparam actorBackgroundColor #FFF6B0
+skinparam actorBorderColor #1E90FF
+' Marqueurs de visibilité littéraux + - # plutôt que des icônes colorées
+skinparam classAttributeIconSize 0
+' « Il est représenté par un dossier avec son nom à l'intérieur »
+skinparam packageStyle folder
+' Pointes de flèches UML strictes : synchrone, asynchrone, retour
 skinparam style strictuml
+
+' Notation stricte : pointe pleine = synchrone, pointe fine = asynchrone.
 
 ' Ligne de vie d'un acteur et lignes de vie d'objets. Le temps s'écoule
 ' de haut en bas.

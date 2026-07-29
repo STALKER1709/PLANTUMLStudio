@@ -113,7 +113,10 @@ describe('Modèles livrés', () => {
       // En-tête de métadonnées, police commune et absence d'ombres portées :
       // c'est le socle visuel partagé par les 14 modèles.
       expect(source, id).toContain('@categorie');
-      expect(source, id).toContain('skinparam defaultFontName "Segoe UI"');
+      expect(source, id).toContain('<style>');
+      expect(source, id).toContain('FontName "Segoe UI"');
+      // Teinte directrice du formalisme : bordures et flèches bleues.
+      expect(source, id).toContain('LineColor #1E90FF');
       expect(source, id).toContain('skinparam shadowing false');
       expect(source, id).toMatch(/@start\w+/);
       expect(source, id).toMatch(/@end\w+/);

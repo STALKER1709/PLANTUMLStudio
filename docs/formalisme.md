@@ -14,21 +14,45 @@ Il a deux origines :
 
 Chaque modèle porte le même en-tête. Il n'est pas décoratif : chaque ligne traduit une règle.
 
+### Palette
+
+| Rôle | Couleur | Application |
+| --- | --- | --- |
+| Bordures et flèches | `#1E90FF` | tous les éléments et toutes les relations |
+| Fond des éléments | `#D9F6FB` | classes, cas d'utilisation, activités, états, composants… |
+| Têtes d'acteurs | `#FFF6B0` | acteurs de tous les diagrammes |
+| Texte des éléments | `#10314A` | libellés à l'intérieur des formes |
+| Conteneurs | transparent | cadre système, paquetages, nœuds, dossiers, cadres |
+| Relations entre cas | `#8888EE` | `<<include>>` et `<<extend>>`, pour les distinguer des associations |
+
+La règle structurante : **les conteneurs restent transparents, seuls les éléments qu'ils
+portent sont colorés.** Un cadre système rempli écraserait visuellement les cas d'utilisation
+qu'il contient.
+
+### Réglages
+
 ```plantuml
-skinparam defaultFontName "Segoe UI"
-skinparam defaultFontSize 12
+<style>
+root    { FontName "Segoe UI"  FontSize 12  LineColor #1E90FF  LineThickness 1.5 }
+element { BackGroundColor #D9F6FB  LineColor #1E90FF  FontColor #10314A }
+arrow   { LineColor #1E90FF  FontColor #333333 }
+activityDiagram { circle { BackGroundColor #1E90FF  LineColor #1E90FF } }
+stateDiagram    { circle { BackGroundColor #1E90FF  LineColor #1E90FF } }
+</style>
 skinparam shadowing false
-skinparam classAttributeIconSize 0   ' impose les marqueurs + - # littéraux
-skinparam packageStyle folder        ' le paquetage est un dossier
-skinparam style strictuml            ' pointes de flèches UML strictes
+skinparam actorBackgroundColor #FFF6B0
+skinparam classAttributeIconSize 0
+skinparam packageStyle folder
+skinparam style strictuml
 ```
 
 | Réglage | Règle correspondante |
 | --- | --- |
-| `shadowing false`, fond blanc, traits noirs | notation UML classique, telle qu'illustrée dans le document |
+| bloc `circle` des diagrammes d'activité et d'états | « L'état initial… est représenté par un cercle plein » — sans lui, le style général le rendrait creux |
 | `classAttributeIconSize 0` | « représenté par son niveau d'accessibilité (+ pour public, - pour private, # pour protected) » — sans ce réglage PlantUML affiche des pastilles colorées à la place |
 | `packageStyle folder` | « Il est représenté par un dossier avec son nom à l'intérieur. » |
 | `style strictuml` | distingue visuellement message synchrone, asynchrone et retour |
+| `shadowing false` | tracé net, sans ombre portée |
 
 Les modèles recopient ces réglages en clair plutôt que d'inclure un fichier commun : chacun
 reste autonome, y compris déplacé hors de son projet. Pour mutualiser, copiez
