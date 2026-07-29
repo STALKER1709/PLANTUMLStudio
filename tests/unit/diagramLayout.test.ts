@@ -8,9 +8,17 @@ import {
   clipToShape,
   containsBox,
   distance,
+  fanDisplacement,
+  midpointOf,
   nearestPoint,
+  offsetPerpendicular,
+  pathPoints,
+  polylineCrossesBox,
+  polylinePath,
   resolveOffset,
   rigidTransform,
+  routeAround,
+  segmentCrossesBox,
   translateBox,
   isIdentity,
   pathEndpoints,
@@ -193,6 +201,125 @@ describe('Réacheminement des flèches', () => {
   it('trouve le point d’ancrage d’une pointe de flèche', () => {
     const proche = nearestPoint('10,10 200,200 12,11', { x: 11, y: 11 });
     expect(proche).toEqual({ x: 12, y: 11 });
+  });
+});
+
+describe('Tracés qui ne se touchent pas', () => {
+  const obstacle = { x: 100, y: 100, width: 100, height: 60 };
+
+  it('détecte qu’un segment entre dans une boîte', () => {
+    // Traverse de part en part.
+    expect(segmentCrossesBox({ x: 0, y: 130 }, { x: 300, y: 130 }, obstacle)).toBe(true);
+    // Passe au-dessus, sans la toucher.
+    expect(segmentCrossesBox({ x: 0, y: 50 }, { x: 300, y: 50 }, obstacle)).toBe(false);
+    // S'arrête avant.
+    expect(segmentCrossesBox({ x: 0, y: 130 }, { x: 90, y: 130 }, obstacle)).toBe(false);
+    // Longer le bord exactement, c'est déjà le toucher : le trait doit être
+    // dévié plutôt que collé à la boîte.
+    expect(segmentCrossesBox({ x: 0, y: 100 }, { x: 300, y: 100 }, obstacle)).toBe(true);
+    // Un cheveu au-dessus, en revanche, ne la touche plus.
+    expect(segmentCrossesBox({ x: 0, y: 99 }, { x: 300, y: 99 }, obstacle)).toBe(false);
+  });
+
+  it('laisse le segment droit quand la voie est libre', () => {
+    const tracé = routeAround({ x: 0, y: 50 }, { x: 300, y: 50 }, [obstacle]);
+    expect(tracé).toHaveLength(2);
+  });
+
+  it('contourne l’élément que le trait traverserait de part en part', () => {
+    const depart = { x: 0, y: 130 };
+    const arrivee = { x: 300, y: 130 };
+    const tracé = routeAround(depart, arrivee, [obstacle]);
+
+    // Traverser en plein milieu impose de longer un côté : deux coudes.
+    expect(tracé.length).toBeGreaterThan(2);
+    // Plus aucun segment n'entre dans la boîte.
+    tracé.slice(1).forEach((point, index) => {
+      expect(segmentCrossesBox(tracé[index], point, obstacle)).toBe(false);
+    });
+    // Le détour laisse une marge, plutôt que de raser l'angle.
+    expect(Math.abs(tracé[1].y - 100)).toBeGreaterThan(5);
+  });
+
+  it('préfère le contournement le plus court', () => {
+    // Le trait passe près du bord haut : le détour doit passer par le haut.
+    const tracé = routeAround({ x: 0, y: 110 }, { x: 300, y: 110 }, [obstacle]);
+    expect(tracé[1].y).toBeLessThan(100);
+  });
+
+  it('renonce plutôt que de proposer un détour lui aussi bouché', () => {
+    // L'obstacle barre la route, et deux murs couvrent les coins par lesquels
+    // on pourrait le contourner : aucun tracé de dégagement n'existe.
+    const bouché = [
+      obstacle,
+      { x: 60, y: 40, width: 180, height: 55 },
+      { x: 60, y: 165, width: 180, height: 55 },
+    ];
+    expect(routeAround({ x: 0, y: 130 }, { x: 300, y: 130 }, bouché)).toHaveLength(2);
+  });
+
+  it('répartit les liens parallèles de part et d’autre de l’axe', () => {
+    // Un lien seul reste sur l'axe.
+    expect(fanDisplacement(0, 1)).toBe(0);
+    // Deux liens s'écartent symétriquement.
+    expect(fanDisplacement(0, 2)).toBe(-fanDisplacement(1, 2));
+    expect(fanDisplacement(0, 2)).not.toBe(0);
+    // Trois liens : celui du milieu garde l'axe.
+    expect(fanDisplacement(1, 3)).toBe(0);
+  });
+
+  it('écarte un point perpendiculairement au trait', () => {
+    // Trait horizontal : l'écart est vertical, et sa norme est respectée.
+    const écarté = offsetPerpendicular({ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 0 }, 20);
+    expect(écarté.x).toBeCloseTo(50, 6);
+    expect(Math.abs(écarté.y)).toBeCloseTo(20, 6);
+  });
+
+  it('place l’étiquette à mi-parcours du tracé, coude compris', () => {
+    // Deux segments de 100 : le milieu est exactement le coude.
+    const coude = midpointOf([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ]);
+    expect(coude).toEqual({ x: 100, y: 0 });
+
+    // Segments inégaux : le milieu tombe sur le plus long.
+    const milieu = midpointOf([
+      { x: 0, y: 0 },
+      { x: 20, y: 0 },
+      { x: 120, y: 0 },
+    ]);
+    expect(milieu.x).toBeCloseTo(60, 6);
+  });
+
+  it('repère un élément posé sur un tracé courbe', () => {
+    // Tracé réellement émis par PlantUML : une courbe et ses points de contrôle.
+    const points = pathPoints('M20,20 C60,20 90,60 90,120');
+
+    // Une boîte posée sur la courbe est vue…
+    expect(polylineCrossesBox(points, { x: 70, y: 30, width: 40, height: 40 })).toBe(true);
+    // …et une boîte à l'écart ne l'est pas.
+    expect(polylineCrossesBox(points, { x: 200, y: 200, width: 40, height: 40 })).toBe(false);
+  });
+
+  it('ne prend pas les rayons d’un arc pour des coordonnées', () => {
+    const points = pathPoints('M10,10 A5,5 0 0 1 40,40');
+
+    expect(points).toEqual([
+      { x: 10, y: 10 },
+      { x: 40, y: 40 },
+    ]);
+  });
+
+  it('écrit une polyligne en commandes absolues', () => {
+    expect(
+      polylinePath([
+        { x: 1, y: 2 },
+        { x: 3, y: 4 },
+        { x: 5, y: 6 },
+      ])
+    ).toBe('M1,2 L3,4 L5,6');
   });
 });
 

@@ -53,11 +53,30 @@ skinparam style strictuml
 | `packageStyle folder` | « Il est représenté par un dossier avec son nom à l'intérieur. » |
 | `style strictuml` | distingue visuellement message synchrone, asynchrone et retour |
 | `shadowing false` | tracé net, sans ombre portée |
-| `linetype ortho` | connecteurs à angles droits, comme dans PowerAMC ou Visual Paradigm |
+| `linetype polyline` | connecteurs en segments droits, brisés là où il le faut |
 
-### Tracés orthogonaux et Graphviz
+### Pourquoi `polyline` plutôt que `ortho`
 
-`linetype ortho` n'est honoré que par **Graphviz**. Sans lui, le moteur Smetana ignore la
+Le routage orthogonal (`linetype ortho`) donne des connecteurs à angles droits, comme
+PowerAMC ou Visual Paradigm. Il a un défaut mesurable : il aligne les liens sur des **couloirs
+communs**, si bien que plusieurs flèches se superposent au point de n'en former qu'une à
+l'œil.
+
+Mesure sur 128 liens répartis dans 17 diagrammes — les 14 modèles livrés et trois diagrammes
+denses (10 classes et 14 relations, 3 acteurs et 14 relations, 7 états et 12 transitions) :
+
+| Routage | Croisements | Frôlements (< 6 unités) | Traversées d'élément |
+| --- | --- | --- | --- |
+| `ortho`, `nodesep 70` | 9 | 5 | 0 |
+| **`polyline`, `nodesep 90`** | **6** | **4** | 0 |
+
+Un tiers de croisements en moins, sans rien perdre par ailleurs : c'est `polyline` qui est
+appliqué. Pour retrouver les angles droits, remplacez `polyline` par `ortho` dans
+`templates/_formalisme.puml` — ou dans le modèle concerné, qui recopie le réglage en clair.
+
+### Routage et Graphviz
+
+`linetype` n'est honoré que par **Graphviz**. Sans lui, le moteur Smetana ignore la
 directive : les connecteurs restent courbes et le diagramme demeure correct, mais l'aspect
 s'éloigne des outils de modélisation classiques. C'est la seule différence visuelle notable
 entre les deux moteurs — raison pour laquelle Graphviz est recommandé sans être exigé.
@@ -90,8 +109,8 @@ le troisième s'écrit dans votre source.
 
 | Levier | Effet | Où |
 | --- | --- | --- |
-| `nodesep 70` / `ranksep 110` | écarte les rangs : sans marge, les traits se touchent | formalisme commun |
-| `linetype ortho` | connecteurs à angles droits | formalisme commun |
+| `nodesep 90` / `ranksep 110` | écarte les rangs : sans marge, les traits se touchent | formalisme commun |
+| `linetype polyline` | connecteurs en segments droits, sans couloirs partagés | formalisme commun |
 | `together { … }` | maintient un groupe d'éléments sur un même axe | votre source |
 | `[norank]` sur un lien | dessine le lien sans le laisser imposer un rang | votre source |
 
@@ -157,8 +176,17 @@ Ce que cela suppose, et ce que cela implique :
   réel — ovale pour un cas d'utilisation, rectangle sinon. Pointes de flèche et losanges sont
   réorientés par un déplacement rigide, sans changement de taille, et l'étiquette se replace au
   milieu du nouveau segment.
+- **Les tracés déviés ne se touchent pas.** Un lien recalculé qui traverserait un autre élément
+  est dévié : le contournement passe par un ou deux points de dégagement, à 14 unités du bord,
+  et c'est le plus court des détours dégagés qui est retenu. Lorsqu'aucun détour n'est libre —
+  élément cerné —, le segment direct est conservé plutôt qu'un contournement qui traverserait
+  lui aussi. Deux liens qui relient la **même paire** d'éléments sont écartés symétriquement de
+  l'axe, faute de quoi ils se superposeraient exactement.
+- **Un élément posé sur un lien le fait dévier**, même si les deux extrémités de ce lien sont
+  restées en place : la collision est cherchée sur l'enveloppe de la courbe d'origine, ce qui
+  ne manque jamais un chevauchement réel.
 - **Le contournement calculé par PlantUML est perdu sur les liens déplacés.** Une courbe qui
-  évitait un obstacle devient un segment droit ; les liens dont aucune extrémité n'a bougé
+  évitait élégamment plusieurs obstacles devient une polyligne ; les liens que rien ne perturbe
   gardent en revanche exactement le tracé d'origine.
 - **Le diagramme de séquence obéit à d'autres règles.** L'axe vertical y porte la chronologie :
   un participant ne se règle donc **qu'en abscisse**, ce que signale le curseur. Sa tête, son

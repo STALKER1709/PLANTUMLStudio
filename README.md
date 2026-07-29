@@ -14,8 +14,9 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Édition libre avant enregistrement : un diagramme se compose dans l'éditeur, puis
   **« Enregistrer sous… »** (Ctrl+Maj+S) demande sa destination — aucun projet requis
 - **Édition du rendu** : déplacer à la souris n'importe quel élément de l'aperçu — y compris un
-  paquetage, qui **emmène tout ce qu'il contient** — pendant que les flèches sont recalculées ;
-  la source reste intacte et l'export conserve les déplacements
+  paquetage, qui **emmène tout ce qu'il contient** — pendant que les flèches sont recalculées et
+  déviées pour ne traverser ni un élément ni une autre flèche ; la source reste intacte et
+  l'export conserve les déplacements
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))

@@ -256,6 +256,50 @@ test('un participant de séquence se règle en abscisse, messages compris', asyn
   expect(Number(await trait.getAttribute('x2'))).toBeCloseTo(Number(avantFin) + 150, 1);
 });
 
+test('un lien contourne l’élément qu’on pose sur sa route', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  // A et C sont alignés verticalement, B est à côté.
+  await window.keyboard.type('@startuml\nclass A\nclass C\nclass B\nA --> C\n@enduml');
+  await expect(window.locator('.preview-stage svg g.link').first()).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await activerEdition();
+
+  const lien = window.locator('g.link[data-entity-1="A"] path');
+  const avant = (await lien.getAttribute('d')) ?? '';
+  expect(avant, 'PlantUML trace d’abord une courbe directe').toContain('C');
+
+  const [boiteA, boiteC, boiteB] = await Promise.all([
+    window.locator('g.entity[data-entity="A"]').boundingBox(),
+    window.locator('g.entity[data-entity="C"]').boundingBox(),
+    window.locator('g.entity[data-entity="B"]').boundingBox(),
+  ]);
+  if (!boiteA || !boiteC || !boiteB) throw new Error('éléments introuvables');
+
+  // B est amené pile au milieu du segment A→C, dont aucune extrémité ne bouge.
+  await window.mouse.move(boiteB.x + boiteB.width / 2, boiteB.y + boiteB.height / 2);
+  await window.mouse.down();
+  await window.mouse.move(boiteA.x + boiteA.width / 2, (boiteA.y + boiteA.height + boiteC.y) / 2, {
+    steps: 12,
+  });
+  await window.mouse.up();
+
+  await expect.poll(() => lien.getAttribute('d'), { timeout: 5000 }).not.toBe(avant);
+
+  const apres = (await lien.getAttribute('d')) ?? '';
+  // Le tracé est devenu une polyligne : il fait le tour au lieu de traverser.
+  expect(apres, 'le lien est dévié en segments droits').toMatch(/^M[\d.,-]+(?: L[\d.,-]+){2,}$/);
+
+  // Le détour comporte au moins un coude entre les deux extrémités.
+  const sommets = [...apres.matchAll(/([-\d.]+),([-\d.]+)/g)];
+  expect(sommets.length, 'le tracé passe par au moins un point de dégagement').toBeGreaterThan(2);
+});
+
 test("l'application ne déclenche aucune requête réseau", async () => {
   const requests: string[] = [];
   window.on('request', (request) => {

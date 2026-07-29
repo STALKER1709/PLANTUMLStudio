@@ -133,6 +133,43 @@ export function transformPoints(points: string, transform: Similarity): string {
   return transformed.join(' ');
 }
 
+/**
+ * Tous les points d'un attribut `d`, points de contrôle compris.
+ *
+ * Une courbe de Bézier tient dans l'enveloppe convexe de ses points de
+ * contrôle : les parcourir comme une polyligne suffit donc à détecter, sans
+ * jamais la manquer, une collision avec un élément.
+ */
+export function pathPoints(data: string): Point[] {
+  const points: Point[] = [];
+
+  for (const [, command, argumentList] of data.matchAll(/([A-Za-z])([^A-Za-z]*)/g)) {
+    const numbers = argumentList.match(NUMBER);
+    if (!numbers) continue;
+
+    if (command.toUpperCase() === 'A') {
+      // rx ry rotation grand-arc sens x y : seuls les deux derniers sont un point.
+      for (let index = 0; index + 6 < numbers.length; index += 7) {
+        points.push({ x: Number(numbers[index + 5]), y: Number(numbers[index + 6]) });
+      }
+      continue;
+    }
+
+    for (let index = 0; index + 1 < numbers.length; index += 2) {
+      points.push({ x: Number(numbers[index]), y: Number(numbers[index + 1]) });
+    }
+  }
+
+  return points;
+}
+
+/** `true` si une polyligne entre dans la boîte. */
+export function polylineCrossesBox(points: readonly Point[], box: Box): boolean {
+  return points.some(
+    (point, index) => index > 0 && segmentCrossesBox(points[index - 1], point, box)
+  );
+}
+
 /** Premier et dernier point d'un attribut `d`. */
 export function pathEndpoints(data: string): { start: Point; end: Point } | null {
   const numbers = data.match(NUMBER);
@@ -359,8 +396,30 @@ export function applyLayoutOffsets(root: SVGSVGElement, offsets: LayoutOffsets):
     else entity.group.removeAttribute('transform');
   });
 
-  root.querySelectorAll<SVGGElement>('g.link[data-entity-1]').forEach((link) => {
-    reflowLink(link, entities, applied);
+  // Les liens qui relient la même paire d'éléments doivent être écartés les uns
+  // des autres : réacheminés seuls, ils se superposeraient exactement.
+  const links = Array.from(root.querySelectorAll<SVGGElement>('g.link[data-entity-1]'));
+  const parPaire = new Map<string, SVGGElement[]>();
+  links.forEach((link) => {
+    const clef = [link.getAttribute('data-entity-1'), link.getAttribute('data-entity-2')]
+      .map((valeur) => valeur ?? '')
+      .sort()
+      .join(' ');
+    const groupe = parPaire.get(clef);
+    if (groupe) groupe.push(link);
+    else parPaire.set(clef, [link]);
+  });
+
+  links.forEach((link) => {
+    const clef = [link.getAttribute('data-entity-1'), link.getAttribute('data-entity-2')]
+      .map((valeur) => valeur ?? '')
+      .sort()
+      .join(' ');
+    const fratrie = parPaire.get(clef) ?? [link];
+    reflowLink(link, entities, applied, {
+      obstacles: Array.from(entities.values()),
+      ecart: fanDisplacement(fratrie.indexOf(link), fratrie.length),
+    });
   });
 
   fitViewBox(root, Array.from(applied.values()).some(isMoved));
@@ -426,10 +485,18 @@ function translateGroup(group: SVGGElement, offset: Point): void {
   group.setAttribute('transform', `translate(${round(offset.x)},${round(offset.y)})`);
 }
 
+interface ReflowContext {
+  /** Éléments à contourner, dans leur position d'origine. */
+  obstacles: readonly EntityHandle[];
+  /** Écart perpendiculaire, pour séparer des liens parallèles. */
+  ecart: number;
+}
+
 function reflowLink(
   link: SVGGElement,
   entities: Map<string, EntityHandle>,
-  applied: ReadonlyMap<string, Point>
+  applied: ReadonlyMap<string, Point>,
+  contexte: ReflowContext
 ): void {
   const from = entities.get(link.getAttribute('data-entity-1') ?? '');
   const to = entities.get(link.getAttribute('data-entity-2') ?? '');
@@ -443,14 +510,29 @@ function reflowLink(
   const decalageDepart = (from && applied.get(from.id)) ?? ORIGINE;
   const decalageArrivee = (to && applied.get(to.id)) ?? ORIGINE;
 
+  if (!from || !to || !originalEndpoints || !originalPath) {
+    restoreOriginalGeometry(link);
+    return;
+  }
+
+  // Un élément déplacé est-il venu se poser sur le tracé, tel qu'il serait si
+  // on se contentait de l'emmener avec ses extrémités ?
+  const traceOrigine = pathPoints(originalPath);
+  const encombre = (deplacementDuTrace: Point): boolean =>
+    contexte.obstacles.some((entity) => {
+      if (entity.id === from.id || entity.id === to.id) return false;
+      const deplacement = applied.get(entity.id);
+      if (!deplacement || !isMoved(deplacement)) return false;
+      return polylineCrossesBox(
+        traceOrigine.map((point) => addOffset(point, deplacementDuTrace)),
+        translateBox(entity.box, deplacement)
+      );
+    });
+
   // Rien n'a bougé aux extrémités : la mise en page calculée par PlantUML est
-  // meilleure que tout ce qu'on pourrait recalculer, on la restitue.
-  if (
-    !from ||
-    !to ||
-    !originalEndpoints ||
-    (!isMoved(decalageDepart) && !isMoved(decalageArrivee))
-  ) {
+  // meilleure que tout ce qu'on pourrait recalculer, on la restitue — sauf si
+  // un élément est venu barrer la route, auquel cas il faut bien dévier.
+  if (!isMoved(decalageDepart) && !isMoved(decalageArrivee) && !encombre(ORIGINE)) {
     restoreOriginalGeometry(link);
     return;
   }
@@ -458,7 +540,7 @@ function reflowLink(
   // Les deux extrémités subissent le même déplacement — lien réflexif, ou lien
   // interne à un paquetage qu'on vient de déplacer : le tracé calculé par
   // PlantUML reste valable, il suffit de l'emmener avec elles.
-  if (samePoint(decalageDepart, decalageArrivee)) {
+  if (samePoint(decalageDepart, decalageArrivee) && !encombre(decalageDepart)) {
     translateLinkGeometry(link, decalageDepart);
     return;
   }
@@ -482,30 +564,56 @@ function reflowLink(
   const nouveauDebut = traceVaDeDepart ? depart : arrivee;
   const nouvelleFin = traceVaDeDepart ? arrivee : depart;
 
-  if (principal) {
-    principal.setAttribute(
-      'd',
-      `M${round(nouveauDebut.x)},${round(nouveauDebut.y)} L${round(nouvelleFin.x)},${round(nouvelleFin.y)}`
-    );
+  // Contournement : les éléments que le trait traverserait, dans leur position
+  // courante, et à l'exception des deux qu'il relie.
+  const obstacles = contexte.obstacles
+    .filter((entity) => entity.id !== from.id && entity.id !== to.id)
+    .map((entity) => translateBox(entity.box, applied.get(entity.id)));
+
+  let tracé = routeAround(nouveauDebut, nouvelleFin, obstacles);
+
+  // Liens parallèles : on les éloigne de l'axe commun, chacun de son côté.
+  if (Math.abs(contexte.ecart) > 1e-9) {
+    const milieu =
+      tracé.length === 2
+        ? {
+            x: (nouveauDebut.x + nouvelleFin.x) / 2,
+            y: (nouveauDebut.y + nouvelleFin.y) / 2,
+          }
+        : tracé[1];
+    tracé = [
+      nouveauDebut,
+      offsetPerpendicular(nouveauDebut, nouvelleFin, milieu, contexte.ecart),
+      nouvelleFin,
+    ];
   }
 
-  // Les tracés secondaires (double trait, décorations) suivent rigidement.
-  const rotation =
-    angleOf(nouveauDebut, nouvelleFin) -
-    angleOf(originalEndpoints.start, originalEndpoints.end);
+  if (principal) principal.setAttribute('d', polylinePath(tracé));
+
+  // Les décorations d'extrémité suivent le premier ou le dernier segment, non
+  // la corde : sur un tracé coudé, ce sont eux qui donnent la direction.
+  const premier = tracé[1];
+  const dernier = tracé[tracé.length - 2];
+  const rotationDebut =
+    angleOf(nouveauDebut, premier) - angleOf(originalEndpoints.start, originalEndpoints.end);
+  const rotationFin =
+    angleOf(dernier, nouvelleFin) - angleOf(originalEndpoints.start, originalEndpoints.end);
 
   paths.slice(1).forEach((element) => {
     const source = readOriginal(element, ORIGINAL_PATH, 'd');
     if (!source) return;
     const extremites = pathEndpoints(source);
     if (!extremites) return;
-    const cible = distance(extremites.start, originalEndpoints.start) <=
-      distance(extremites.start, originalEndpoints.end)
-      ? nouveauDebut
-      : nouvelleFin;
+    const versDebut =
+      distance(extremites.start, originalEndpoints.start) <=
+      distance(extremites.start, originalEndpoints.end);
+    const cible = versDebut ? nouveauDebut : nouvelleFin;
     element.setAttribute(
       'd',
-      transformPathData(source, rigidTransform(extremites.start, cible, rotation))
+      transformPathData(
+        source,
+        rigidTransform(extremites.start, cible, versDebut ? rotationDebut : rotationFin)
+      )
     );
   });
 
@@ -535,7 +643,10 @@ function reflowLink(
 
       element.setAttribute(
         'points',
-        transformPoints(source, rigidTransform(pivot, pivotCible, rotation))
+        transformPoints(
+          source,
+          rigidTransform(pivot, pivotCible, versFin ? rotationFin : rotationDebut)
+        )
       );
     });
 
@@ -544,14 +655,34 @@ function reflowLink(
     x: (originalEndpoints.start.x + originalEndpoints.end.x) / 2,
     y: (originalEndpoints.start.y + originalEndpoints.end.y) / 2,
   };
-  const milieuCible = {
-    x: (nouveauDebut.x + nouvelleFin.x) / 2,
-    y: (nouveauDebut.y + nouvelleFin.y) / 2,
-  };
+  const milieuCible = midpointOf(tracé);
   translateTexts(link, {
     x: milieuCible.x - milieuOrigine.x,
     y: milieuCible.y - milieuOrigine.y,
   });
+}
+
+/** Point situé à mi-parcours d'une polyligne, le long du tracé. */
+export function midpointOf(points: readonly Point[]): Point {
+  if (points.length === 0) return { x: 0, y: 0 };
+  if (points.length === 1) return points[0];
+
+  const longueurs = points.slice(1).map((point, index) => distance(points[index], point));
+  const total = longueurs.reduce((somme, valeur) => somme + valeur, 0);
+  if (total < 1e-9) return points[0];
+
+  let reste = total / 2;
+  for (let index = 0; index < longueurs.length; index += 1) {
+    if (reste <= longueurs[index]) {
+      const ratio = longueurs[index] < 1e-9 ? 0 : reste / longueurs[index];
+      return {
+        x: points[index].x + (points[index + 1].x - points[index].x) * ratio,
+        y: points[index].y + (points[index + 1].y - points[index].y) * ratio,
+      };
+    }
+    reste -= longueurs[index];
+  }
+  return points[points.length - 1];
 }
 
 /** Restitue la géométrie calculée par PlantUML. */
@@ -650,6 +781,167 @@ export function clipToShape(box: Box, ellipse: boolean, vers: Point): Point {
 
 export function angleOf(from: Point, to: Point): number {
   return Math.atan2(to.y - from.y, to.x - from.x);
+}
+
+/**
+ * `true` si le segment `[a, b]` pénètre dans la boîte, élargie de `margin`.
+ *
+ * Découpage par tranches (Liang–Barsky) : on restreint le paramètre du segment
+ * à l'intervalle où il est simultanément dans la bande verticale et dans la
+ * bande horizontale de la boîte. S'il en reste quelque chose, il y a
+ * intersection.
+ */
+export function segmentCrossesBox(a: Point, b: Point, box: Box, margin = 0): boolean {
+  const minX = box.x - margin;
+  const minY = box.y - margin;
+  const maxX = box.x + box.width + margin;
+  const maxY = box.y + box.height + margin;
+
+  let debut = 0;
+  let fin = 1;
+
+  const bornes: Array<[number, number]> = [
+    [-(b.x - a.x), a.x - minX],
+    [b.x - a.x, maxX - a.x],
+    [-(b.y - a.y), a.y - minY],
+    [b.y - a.y, maxY - a.y],
+  ];
+
+  for (const [p, q] of bornes) {
+    if (Math.abs(p) < 1e-9) {
+      // Segment parallèle à ce bord : hors de la bande, il n'entre jamais.
+      if (q < 0) return false;
+      continue;
+    }
+    const r = q / p;
+    if (p < 0) {
+      if (r > fin) return false;
+      if (r > debut) debut = r;
+    } else {
+      if (r < debut) return false;
+      if (r < fin) fin = r;
+    }
+  }
+
+  return debut < fin;
+}
+
+/** Écart laissé entre un tracé et l'élément qu'il contourne, en unités SVG. */
+const CLEARANCE = 14;
+
+function pathLength(points: readonly Point[]): number {
+  return points
+    .slice(1)
+    .reduce((somme, point, index) => somme + distance(points[index], point), 0);
+}
+
+function isClear(points: readonly Point[], obstacles: readonly Box[]): boolean {
+  return points.slice(1).every((point, index) =>
+    obstacles.every((box) => !segmentCrossesBox(points[index], point, box))
+  );
+}
+
+/** Les quatre coins d'une boîte, écartés de `clearance`. */
+function expandedCorners(box: Box, clearance: number): Point[] {
+  const minX = box.x - clearance;
+  const minY = box.y - clearance;
+  const maxX = box.x + box.width + clearance;
+  const maxY = box.y + box.height + clearance;
+  return [
+    { x: minX, y: minY },
+    { x: maxX, y: minY },
+    { x: maxX, y: maxY },
+    { x: minX, y: maxY },
+  ];
+}
+
+/**
+ * Tracé d'un lien entre deux points : le segment droit s'il est libre, sinon
+ * un tracé coudé qui contourne les éléments rencontrés.
+ *
+ * Les candidats sont construits autour des seuls obstacles réellement traversés.
+ * Un seul coude suffit quand le trait ne fait qu'effleurer un élément ; il en
+ * faut deux — le long d'un côté entier — lorsqu'il le traverse de part en part.
+ * On retient le plus court des tracés qui ne traversent plus rien.
+ *
+ * Faute de candidat libre, le segment droit est conservé : mieux vaut un tracé
+ * direct qu'un détour qui, lui aussi, traverserait quelque chose.
+ */
+export function routeAround(
+  from: Point,
+  to: Point,
+  obstacles: readonly Box[],
+  clearance = CLEARANCE
+): Point[] {
+  const direct = [from, to];
+  const traverses = obstacles.filter((box) => segmentCrossesBox(from, to, box));
+  if (traverses.length === 0) return direct;
+
+  const routes: Point[][] = [];
+  // Coudes à angle droit : le détour le plus discret quand il passe.
+  routes.push([from, { x: from.x, y: to.y }, to], [from, { x: to.x, y: from.y }, to]);
+
+  traverses.forEach((box) => {
+    const coins = expandedCorners(box, clearance);
+    coins.forEach((coin, index) => {
+      routes.push([from, coin, to]);
+      // Longer un côté entier : deux coins consécutifs, dans les deux sens.
+      const suivant = coins[(index + 1) % coins.length];
+      routes.push([from, coin, suivant, to], [from, suivant, coin, to]);
+    });
+  });
+
+  let meilleure: Point[] | null = null;
+  let meilleureLongueur = Infinity;
+
+  routes.forEach((route) => {
+    if (!isClear(route, obstacles)) return;
+    const longueur = pathLength(route);
+    if (longueur < meilleureLongueur) {
+      meilleureLongueur = longueur;
+      meilleure = route;
+    }
+  });
+
+  return meilleure ?? direct;
+}
+
+/** Écart entre deux liens qui relient la même paire d'éléments. */
+const FAN_SPACING = 18;
+
+/**
+ * Écarte les liens qui relient la même paire d'éléments.
+ *
+ * Réacheminés en ligne droite, ils se superposeraient exactement : on les
+ * répartit de part et d'autre de l'axe, perpendiculairement, de sorte qu'ils
+ * restent tous lisibles.
+ */
+export function fanDisplacement(index: number, count: number, spacing = FAN_SPACING): number {
+  if (count <= 1) return 0;
+  return (index - (count - 1) / 2) * spacing;
+}
+
+/** Décale un point perpendiculairement à la direction `from → to`. */
+export function offsetPerpendicular(
+  from: Point,
+  to: Point,
+  point: Point,
+  amount: number
+): Point {
+  if (Math.abs(amount) < 1e-9) return point;
+  const longueur = distance(from, to);
+  if (longueur < 1e-9) return point;
+  return {
+    x: point.x - ((to.y - from.y) / longueur) * amount,
+    y: point.y + ((to.x - from.x) / longueur) * amount,
+  };
+}
+
+/** Écrit une polyligne sous forme d'attribut `d`. */
+export function polylinePath(points: readonly Point[]): string {
+  return points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${round(point.x)},${round(point.y)}`)
+    .join(' ');
 }
 
 /**
