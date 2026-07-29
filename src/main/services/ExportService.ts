@@ -95,6 +95,45 @@ export class ExportService {
     };
   }
 
+  /**
+   * Écrit un rendu **déjà produit** — celui affiché dans l'aperçu, déplacements
+   * compris — au lieu de le régénérer depuis la source.
+   *
+   * Le PNG arrive rastérisé par le renderer : le main process ne sait pas
+   * dessiner un SVG, et Chromium le fait déjà, hors ligne.
+   */
+  async exportRenderedSvg(request: {
+    svg: string;
+    pngBase64?: string;
+    format: DiagramFormat;
+    targetPath: string;
+  }): Promise<ExportResult> {
+    const { svg, pngBase64, format, targetPath } = request;
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+    if (format === 'svg') {
+      await fs.writeFile(targetPath, svg, 'utf-8');
+      return { success: true, outputPath: targetPath };
+    }
+
+    if (format === 'pdf') {
+      await fs.writeFile(targetPath, await this.svgToPdfBuffer(svg));
+      return { success: true, outputPath: targetPath };
+    }
+
+    if (!pngBase64) {
+      return {
+        success: false,
+        errors: [
+          { message: "Le rendu PNG du diagramme édité n'a pas pu être produit.", raw: 'png missing' },
+        ],
+      };
+    }
+
+    await fs.writeFile(targetPath, Buffer.from(pngBase64, 'base64'));
+    return { success: true, outputPath: targetPath };
+  }
+
   /** Rend un diagramme dans le format demandé et retourne les octets produits. */
   async renderToBufferForFormat(
     source: string,

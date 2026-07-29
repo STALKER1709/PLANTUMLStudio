@@ -27,6 +27,9 @@ export function App() {
   const revealLine = useEditorStore((state) => state.revealLine);
   const requestRevealLine = useEditorStore((state) => state.requestRevealLine);
   const consumeRevealLine = useEditorStore((state) => state.consumeRevealLine);
+  const layoutOffsets = useEditorStore((state) => state.layoutOffsets);
+  const moveElement = useEditorStore((state) => state.moveElement);
+  const resetLayout = useEditorStore((state) => state.resetLayout);
 
   const saveCurrentFile = useProjectStore((state) => state.saveCurrentFile);
   const saveCurrentFileAs = useProjectStore((state) => state.saveCurrentFileAs);
@@ -102,6 +105,9 @@ export function App() {
             debounceMs={debounceMs}
             enabled={autoRender}
             applyFormalism={applyFormalism}
+            layoutOffsets={layoutOffsets}
+            onMoveElement={moveElement}
+            onResetLayout={resetLayout}
             onGotoLine={requestRevealLine}
           />
         }

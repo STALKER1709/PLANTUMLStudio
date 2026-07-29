@@ -118,6 +118,32 @@ Visiteur <|-[norank]- Client
 Un acteur secondaire (service externe, API) reste **hors** du `together` : il se place alors
 naturellement du côté opposé, comme dans la notation habituelle.
 
+## 1 ter. Éditer le rendu
+
+La disposition calculée peut être retouchée **à la souris**, sans toucher au texte.
+
+Le bouton **« Éditer »** de la prévisualisation rend les éléments saisissables : un glisser
+déplace une classe, un acteur ou un cas d'utilisation, et les liens qui l'atteignent sont
+réécrits pour rester accrochés. Le compteur voisin indique le nombre de déplacements et les
+annule tous d'un clic.
+
+Ce que cela suppose, et ce que cela implique :
+
+- **PlantUML annote son SVG.** Chaque élément y porte son identifiant de source
+  (`data-entity`), chaque lien ses deux extrémités. Les déplacements sont donc indexés par
+  identifiant : ils **survivent aux régénérations** du diagramme tant que l'élément garde son
+  nom dans la source.
+- **La source n'est jamais modifiée.** Les déplacements vivent à côté d'elle, le temps de la
+  session ; ils ne sont pas enregistrés dans le `.puml`.
+- **Un lien déplacé garde la forme de son tracé.** Il subit une similitude qui envoie ses
+  extrémités sur leurs nouvelles positions : la courbe est conservée, mais elle n'est pas
+  recalculée par le moteur de mise en page. Un déplacement important peut donc produire un
+  tracé qu'un nouveau rendu aurait routé autrement.
+- **L'export suit ce que vous voyez.** Dès qu'un déplacement existe, « Exporter » écrit le
+  rendu affiché — SVG et PDF depuis le texte SVG, PNG rastérisé par l'application — au lieu de
+  régénérer depuis la source.
+- **La zone visible s'agrandit** pour accueillir un élément tiré au-delà du cadre calculé.
+
 ## 2. Les 7 diagrammes du document
 
 ### 2.1 Cas d'utilisation — `08-diagramme-cas-utilisation.puml`

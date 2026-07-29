@@ -25,6 +25,7 @@ export const IPC_CHANNELS = {
   // Export
   EXPORT_DIAGRAM: 'export:diagram',
   EXPORT_PROJECT: 'export:project',
+  EXPORT_RENDERED: 'export:rendered',
 
   // Environnement / templates
   CHECK_ENVIRONMENT: 'env:check',

@@ -394,6 +394,47 @@ export function registerIpcHandlers(context: IpcContext): void {
     }
   );
 
+  ipcMain.handle(
+    IPC_CHANNELS.EXPORT_RENDERED,
+    async (
+      _event,
+      format: DiagramFormat,
+      svg: string,
+      pngBase64?: string
+    ): Promise<IpcResult<ExportResult>> => {
+      try {
+        const window = context.getMainWindow();
+        const selection = await showSaveDialog(window, {
+          title: 'Exporter le diagramme',
+          defaultPath: currentProject
+            ? path.join(
+                currentProject.rootPath,
+                currentProject.meta.settings.exportDirectory,
+                `diagramme.${format}`
+              )
+            : `diagramme.${format}`,
+          filters: [FORMAT_FILTERS[format]],
+        });
+
+        if (selection.canceled || !selection.filePath) {
+          return { ok: false, error: 'Export annulé.' };
+        }
+
+        // Le rendu affiché fait foi : rien n'est régénéré depuis la source,
+        // sans quoi les déplacements seraient perdus.
+        const result = await exportService.exportRenderedSvg({
+          svg,
+          pngBase64,
+          format,
+          targetPath: selection.filePath,
+        });
+        return result.success ? ok(result) : { ok: false, error: describeExportFailure(result) };
+      } catch (error) {
+        return fail(error);
+      }
+    }
+  );
+
   // -------------------------------------------- Environnement et modèles
   ipcMain.handle(IPC_CHANNELS.CHECK_ENVIRONMENT, async (): Promise<EnvironmentStatus> => {
     return environment.checkEnvironment();

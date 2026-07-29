@@ -25,6 +25,7 @@ const CHANNELS = {
   RENAME_FILE: 'file:rename',
   EXPORT_DIAGRAM: 'export:diagram',
   EXPORT_PROJECT: 'export:project',
+  EXPORT_RENDERED: 'export:rendered',
   CHECK_ENVIRONMENT: 'env:check',
   LIST_TEMPLATES: 'templates:list',
   READ_TEMPLATE: 'templates:read',
@@ -54,6 +55,9 @@ const api: ElectronAPI = {
     ipcRenderer.invoke(CHANNELS.EXPORT_DIAGRAM, source, format, applyFormalism),
   exportProject: (files: string[], format: DiagramFormat, applyFormalism = true) =>
     ipcRenderer.invoke(CHANNELS.EXPORT_PROJECT, files, format, applyFormalism),
+
+  exportRendered: (format: DiagramFormat, svg: string, pngBase64?: string) =>
+    ipcRenderer.invoke(CHANNELS.EXPORT_RENDERED, format, svg, pngBase64),
 
   checkEnvironment: () => ipcRenderer.invoke(CHANNELS.CHECK_ENVIRONMENT),
   listTemplates: () => ipcRenderer.invoke(CHANNELS.LIST_TEMPLATES),

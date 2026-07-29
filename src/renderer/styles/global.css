@@ -454,3 +454,22 @@ input[type='text'] {
   gap: 8px;
   margin-top: 16px;
 }
+
+/* ------------------------------------------------- Édition du rendu */
+
+.preview-stage.editing svg .entity {
+  cursor: grab;
+}
+
+.preview-stage.editing svg .entity:hover > * {
+  /* Halo discret : l'élément survolé est saisissable. */
+  filter: drop-shadow(0 0 3px var(--color-accent));
+}
+
+.preview-stage.editing svg .entity.dragging {
+  cursor: grabbing;
+}
+
+.preview-stage.editing svg .entity.dragging > * {
+  filter: drop-shadow(0 0 5px var(--color-accent));
+}

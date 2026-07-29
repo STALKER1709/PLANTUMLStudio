@@ -161,6 +161,16 @@ export interface ElectronAPI {
     applyFormalism?: boolean
   ): Promise<IpcResult<ExportResult>>;
 
+  /**
+   * Exporte le rendu tel qu'il est affiché, déplacements compris, au lieu de
+   * le régénérer depuis la source.
+   */
+  exportRendered(
+    format: DiagramFormat,
+    svg: string,
+    pngBase64?: string
+  ): Promise<IpcResult<ExportResult>>;
+
   checkEnvironment(): Promise<EnvironmentStatus>;
   listTemplates(): Promise<IpcResult<TemplateSummary[]>>;
   readTemplate(id: string): Promise<IpcResult<string>>;

@@ -3,7 +3,9 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../../../shared/constants';
 import { useDebouncedRender } from '../../hooks/useDebouncedRender';
+import { useDiagramEditing } from '../../hooks/useDiagramEditing';
 import { useTranslation } from '../../i18n';
+import type { LayoutOffsets, Point } from '../../utils/diagramLayout';
 import { readSvgSize, sanitizeSvg } from '../../utils/sanitizeSvg';
 import { ErrorPanel } from '../common/ErrorPanel';
 import { ZoomPanControls } from './ZoomPanControls';
@@ -14,6 +16,10 @@ export interface DiagramPreviewProps {
   enabled: boolean;
   /** Applique le formalisme commun au rendu. */
   applyFormalism: boolean;
+  /** Déplacements appliqués aux éléments du diagramme. */
+  layoutOffsets: LayoutOffsets;
+  onMoveElement(id: string, offset: Point): void;
+  onResetLayout(): void;
   onGotoLine(line: number): void;
 }
 
@@ -27,6 +33,9 @@ export function DiagramPreview({
   debounceMs,
   enabled,
   applyFormalism,
+  layoutOffsets,
+  onMoveElement,
+  onResetLayout,
   onGotoLine,
 }: DiagramPreviewProps) {
   const { t } = useTranslation();
@@ -40,11 +49,24 @@ export function DiagramPreview({
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState<Offset>({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const panOrigin = useRef<{ pointerX: number; pointerY: number; offset: Offset } | null>(null);
 
   // Le SVG n'est jamais injecté brut : voir `sanitizeSvg`.
   const safeSvg = useMemo(() => (svgContent ? sanitizeSvg(svgContent) : ''), [svgContent]);
+
+  useDiagramEditing({
+    stageRef,
+    svgMarkup: safeSvg,
+    offsets: layoutOffsets,
+    enabled: isEditing,
+    zoom,
+    onMove: onMoveElement,
+  });
+
+  const deplacements = Object.keys(layoutOffsets).length;
 
   const changeZoom = useCallback((delta: number) => {
     setZoom((previous) => clamp(Number((previous + delta).toFixed(2)), ZOOM_MIN, ZOOM_MAX));
@@ -85,6 +107,9 @@ export function DiagramPreview({
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    // En mode édition, un appui sur un élément lui appartient : il le déplace
+    // au lieu de faire glisser la vue entière.
+    if (isEditing && (event.target as Element).closest('g.entity[data-entity]')) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     panOrigin.current = { pointerX: event.clientX, pointerY: event.clientY, offset };
     setIsPanning(true);
@@ -111,6 +136,21 @@ export function DiagramPreview({
     <div className="diagram-preview">
       <div className="panel-header">
         <span>{t('panel.preview')}</span>
+        <button
+          type="button"
+          className={isEditing ? 'primary' : undefined}
+          aria-pressed={isEditing}
+          disabled={!safeSvg}
+          title={t('preview.editHint')}
+          onClick={() => setIsEditing((actif) => !actif)}
+        >
+          {t('preview.edit')}
+        </button>
+        {deplacements > 0 && (
+          <button type="button" onClick={onResetLayout} title={t('preview.resetLayout')}>
+            ↺ {deplacements}
+          </button>
+        )}
         <ZoomPanControls
           zoom={zoom}
           onZoomIn={() => changeZoom(ZOOM_STEP)}
@@ -140,7 +180,8 @@ export function DiagramPreview({
       >
         {safeSvg ? (
           <div
-            className="preview-stage"
+            ref={stageRef}
+            className={`preview-stage${isEditing ? ' editing' : ''}`}
             style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
             // Contenu assaini par sanitizeSvg (voir utils/sanitizeSvg.ts)
             dangerouslySetInnerHTML={{ __html: safeSvg }}

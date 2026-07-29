@@ -13,6 +13,8 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Arborescence de projet : création, renommage, suppression de fichiers `.puml`
 - Édition libre avant enregistrement : un diagramme se compose dans l'éditeur, puis
   **« Enregistrer sous… »** (Ctrl+Maj+S) demande sa destination — aucun projet requis
+- **Édition du rendu** : déplacer les éléments à la souris dans l'aperçu, les liens suivent ;
+  la source reste intacte et l'export conserve les déplacements
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))

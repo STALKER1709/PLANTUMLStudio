@@ -42,6 +42,9 @@
   "preview.fit": "Ajuster à la fenêtre",
   "preview.rendering": "Génération en cours",
   "preview.empty": "Écrivez du code PlantUML pour voir le diagramme apparaître ici.",
+  "preview.edit": "Éditer",
+  "preview.editHint": "Déplacer les éléments du diagramme à la souris. La source n'est pas modifiée.",
+  "preview.resetLayout": "Annuler tous les déplacements",
   "preview.duration": "Généré en {ms} ms",
 
   "errors.title": "Erreur de génération",

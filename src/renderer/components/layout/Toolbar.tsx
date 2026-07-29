@@ -4,6 +4,7 @@ import { useEditorStore, selectIsDirty } from '../../store/editorStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useToastStore } from '../../store/toastStore';
+import { svgToPngBase64 } from '../../utils/rasterize';
 import { DiagramTypeSelector } from '../common/DiagramTypeSelector';
 
 const FORMATS: DiagramFormat[] = ['png', 'svg', 'pdf'];
@@ -22,6 +23,7 @@ export function Toolbar() {
   const isDirty = useEditorStore(selectIsDirty);
   const openDraft = useEditorStore((state) => state.openDraft);
   const setContent = useEditorStore((state) => state.setContent);
+  const layoutOffsets = useEditorStore((state) => state.layoutOffsets);
 
   const theme = useSettingsStore((state) => state.theme);
   const toggleTheme = useSettingsStore((state) => state.toggleTheme);
@@ -33,7 +35,12 @@ export function Toolbar() {
   const setExportFormat = useSettingsStore((state) => state.setExportFormat);
 
   const exportDiagram = async () => {
-    const result = await window.electronAPI.exportDiagram(content, exportFormat, applyFormalism);
+    // Un diagramme retouché à la souris s'exporte tel qu'il est affiché :
+    // le régénérer depuis la source perdrait les déplacements.
+    const result =
+      Object.keys(layoutOffsets).length > 0
+        ? await exporterRenduAffiche()
+        : await window.electronAPI.exportDiagram(content, exportFormat, applyFormalism);
     if (!result.ok) {
       if (result.error && !/annul/i.test(result.error)) {
         useToastStore.getState().push('error', t('toast.error', { message: result.error }));
@@ -43,6 +50,17 @@ export function Toolbar() {
     useToastStore
       .getState()
       .push('success', t('toast.exported', { path: result.data?.outputPath ?? '' }));
+  };
+
+  const exporterRenduAffiche = async () => {
+    const svgElement = document.querySelector('.preview-stage svg');
+    if (!svgElement) {
+      return { ok: false, error: t('errors.unknown') };
+    }
+
+    const svg = new XMLSerializer().serializeToString(svgElement);
+    const pngBase64 = exportFormat === 'png' ? await svgToPngBase64(svg) : undefined;
+    return window.electronAPI.exportRendered(exportFormat, svg, pngBase64);
   };
 
   const exportProject = async () => {
