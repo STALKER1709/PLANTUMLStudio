@@ -1,0 +1,27 @@
+' Formalisme commun — PlantUML Studio
+'
+' Ce fichier rassemble les conventions visuelles appliquées à tous les modèles.
+' Il est fourni pour être COPIÉ dans votre projet : une fois présent à la racine
+' du projet ouvert, vous pouvez y faire appel depuis vos diagrammes avec
+'   !include _formalisme.puml
+' (les inclusions sont limitées au dossier du projet, jamais au-delà).
+'
+' Les modèles livrés recopient ces réglages en clair : chacun reste autonome,
+' même déplacé hors de son projet.
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam BackgroundColor #FFFFFF
+skinparam ArrowColor #1A1A1A
+
+' Le formalisme impose les marqueurs littéraux + - # devant les attributs
+' et les méthodes, et non les icônes de visibilité colorées.
+skinparam classAttributeIconSize 0
+
+' « Il est représenté par un dossier avec son nom à l'intérieur. »
+skinparam packageStyle folder
+
+' Notation stricte pour les flèches de séquence (pointe pleine = synchrone,
+' pointe fine = asynchrone, trait interrompu = retour).
+skinparam style strictuml

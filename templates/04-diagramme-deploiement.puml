@@ -1,8 +1,14 @@
 ' Diagramme de déploiement — répartition physique des artefacts
+' @categorie structurel
 @startuml
 title Déploiement du poste utilisateur
 
-node "Poste de travail (Windows / macOS / Linux)" {
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Un nœud est un cube : il représente une ressource matérielle ou d'exécution.
+node "Poste de travail (Windows / macOS / Linux)" as poste {
   artifact "PlantUML Studio.exe" as App
 
   node "Processus Electron" {
@@ -21,13 +27,7 @@ node "Poste de travail (Windows / macOS / Linux)" {
   }
 }
 
-cloud "Réseau" as Net #line.dashed {
-  note as N1
-    Aucune connexion sortante :
-    l'application fonctionne
-    intégralement hors ligne.
-  end note
-}
+cloud "Réseau" as Net #line.dashed
 
 App --> Main
 Main --> Renderer : IPC
@@ -35,6 +35,12 @@ Main --> JVM : child_process
 Jar --> Rendu : génère
 Main --> Projet : lit / écrit
 Main --> Source : lit / écrit
-Main .[#red,dashed].> Net : bloqué
+Main .[#B22222,dashed].> Net : bloqué
+
+note right of Net
+  Aucune connexion sortante :
+  l'application fonctionne
+  intégralement hors ligne.
+end note
 
 @enduml

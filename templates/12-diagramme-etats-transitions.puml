@@ -1,0 +1,47 @@
+' Diagramme d'états-transitions — cycle de vie d'un objet
+' @categorie comportemental
+@startuml
+title Cycle de vie d'une commande
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' L'état initial est un cercle plein : l'objet avant toute transaction.
+[*] --> Brouillon
+
+' Un état correspond à une situation durable de l'objet. Il peut contenir
+' ses propres sous-états.
+state Brouillon {
+  [*] --> PanierVide
+  PanierVide --> PanierRempli : ajouterArticle()
+  PanierRempli --> PanierVide : viderPanier()
+}
+
+' Une transition est déclenchée par un évènement, éventuellement gardé
+' par une condition entre crochets.
+Brouillon --> Validee : valider() [panier non vide]
+Validee --> Payee : encaisser()
+Payee --> Preparee : preparer()
+Preparee --> Expediee : expedier()
+Expediee --> Livree : accuserReception()
+
+Validee --> Annulee : annuler()
+Payee --> Remboursee : rembourser()
+
+' L'état final, cercle plein entouré d'un cercle, marque la destruction
+' de l'objet modélisé. Il peut y en avoir plusieurs.
+Livree --> [*]
+Annulee --> [*]
+Remboursee --> [*]
+
+' Actions d'entrée et de sortie attachées à un état.
+state Expediee : entry / envoyer la notification
+state Expediee : exit / clore le suivi
+
+note right of Annulee
+  Une commande expédiée ne peut plus être
+  annulée : seul un remboursement reste possible.
+end note
+
+@enduml

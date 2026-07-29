@@ -48,11 +48,23 @@ export function DiagramTypeSelector({ isDirty, onInsert }: DiagramTypeSelectorPr
         }}
       >
         <option value="">{t('toolbar.templatePlaceholder')}</option>
-        {items.map((template) => (
-          <option key={template.id} value={template.id}>
-            {template.label}
-          </option>
-        ))}
+
+        {/* Les 14 diagrammes UML se rangent en deux familles : les regrouper
+            évite une liste plate de 14 entrées difficile à parcourir. */}
+        {(['structurel', 'comportemental'] as const).map((category) => {
+          const group = items.filter((template) => template.category === category);
+          if (group.length === 0) return null;
+
+          return (
+            <optgroup key={category} label={t(`template.category.${category}`)}>
+              {group.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.label}
+                </option>
+              ))}
+            </optgroup>
+          );
+        })}
       </select>
 
       <PromptDialog

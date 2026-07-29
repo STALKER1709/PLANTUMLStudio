@@ -1,0 +1,49 @@
+' Diagramme de cas d'utilisation — fonctionnalités offertes aux acteurs
+' @categorie comportemental
+@startuml
+title Plateforme de réservation — cas d'utilisation
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+left to right direction
+
+' Un acteur est un élément externe qui joue un rôle dans le système.
+actor "Visiteur" as Visiteur
+actor "Client inscrit" as Client
+actor "Administrateur" as Admin
+actor "Service de paiement" as Paiement
+
+' Le système est le cadre délimitant l'espace étudié ; son nom figure en haut
+' et tous les cas d'utilisation se trouvent à l'intérieur.
+rectangle "Plateforme de réservation" {
+  ' Un cas d'utilisation est une ellipse, libellée verbe à l'infinitif + objet.
+  usecase "Consulter le catalogue" as UC1
+  usecase "Créer un compte" as UC2
+  usecase "Réserver une prestation" as UC3
+  usecase "Payer une réservation" as UC4
+  usecase "Annuler une réservation" as UC5
+  usecase "Gérer le catalogue" as UC6
+}
+
+' Association : trait simple reliant un acteur à un cas d'utilisation.
+Visiteur -- UC1
+Visiteur -- UC2
+Client -- UC1
+Client -- UC3
+Client -- UC5
+Admin -- UC6
+UC4 -- Paiement
+
+' Généralisation entre acteurs : le client inscrit fait tout ce que fait le
+' visiteur, et davantage. Flèche allant de l'héritier vers l'hérité.
+Visiteur <|-- Client
+
+' Relations entre cas d'utilisation : flèche à traits interrompus.
+' <<include>> : le paiement fait toujours partie de la réservation.
+UC3 ..> UC4 : <<include>>
+' <<extend>> : l'annulation n'intervient que dans certains cas.
+UC5 ..> UC3 : <<extend>>
+
+@enduml

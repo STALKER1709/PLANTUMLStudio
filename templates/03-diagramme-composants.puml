@@ -1,6 +1,12 @@
 ' Diagramme de composants — briques logicielles et interfaces échangées
+' @categorie structurel
 @startuml
 title Architecture applicative — composants
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam packageStyle folder
 
 package "Poste de travail" {
   [Interface React] as UI
@@ -20,6 +26,7 @@ package "Ressources embarquées" {
   [Graphviz] as Graphviz
 }
 
+' Interface requise / fournie : notation « boule et douille ».
 interface "API contextBridge" as API
 interface "stdin / stdout" as Pipe
 

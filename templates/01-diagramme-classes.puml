@@ -1,15 +1,22 @@
-' Diagramme de classes — structure statique : classes, attributs, méthodes et relations
+' Diagramme de classes — structure statique : classes, attributs, méthodes, associations
+' @categorie structurel
 @startuml
 title Gestion de commandes — diagramme de classes
 
-' « skinparam » ajuste l'apparence sans toucher au contenu du modèle
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+' Visibilité en clair (+ public, - privé, # protégé), conformément au formalisme
 skinparam classAttributeIconSize 0
 
+' Une classe se représente par un rectangle divisé en trois sections :
+' nom, attributs typés, puis opérations.
 class Client {
   - identifiant : UUID
   - nom : String
-  - courriel : String
+  # courriel : String
   + passerCommande(panier : Panier) : Commande
+  + historique() : List<Commande>
 }
 
 class Commande {
@@ -31,6 +38,12 @@ class Produit {
   - prix : Decimal
 }
 
+class ClientProfessionnel {
+  - siret : String
+  - remise : Decimal
+  + total() : Decimal
+}
+
 enum StatutCommande {
   BROUILLON
   VALIDEE
@@ -38,21 +51,31 @@ enum StatutCommande {
   ANNULEE
 }
 
-interface Facturable {
+interface Facturable <<interface>> {
   + genererFacture() : Facture
 }
 
-' Relations : 1 client possède 0..n commandes
+' Association : trait simple entre deux classes, multiplicités aux extrémités.
 Client "1" -- "0..*" Commande : passe >
+
+' Composition : losange plein côté agrégat. La destruction de la commande
+' entraîne celle de ses lignes.
 Commande "1" *-- "1..*" LigneCommande : contient >
-LigneCommande "0..*" --> "1" Produit : référence >
+
+' Agrégation : losange creux. Le produit survit à la ligne de commande.
+LigneCommande "0..*" o-- "1" Produit : référence >
+
+' Héritage : flèche à pointe triangulaire creuse vers la classe mère.
+Client <|-- ClientProfessionnel
+
+' Réalisation d'interface : trait interrompu, pointe triangulaire creuse.
 Commande ..|> Facturable
+
 Commande --> StatutCommande
 
 note right of LigneCommande
-  Le prix unitaire est figé à la
-  commande : il ne suit pas les
-  évolutions du catalogue.
+  Le prix unitaire est figé à la commande :
+  il ne suit pas les évolutions du catalogue.
 end note
 
 @enduml

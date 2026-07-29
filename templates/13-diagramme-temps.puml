@@ -1,7 +1,16 @@
 ' Diagramme de temps — évolution des états en fonction du temps
+' @categorie comportemental
 @startuml
 title Génération d'un diagramme — chronologie
 
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Deux notations coexistent :
+'   robust  : ligne de vie à états discrets, tracée en créneaux ;
+'   concise : ligne de vie compacte, adaptée aux états de courte durée.
+' L'axe horizontal porte le temps, gradué en unités déclarées par @.
 robust "Éditeur" as Editeur
 concise "Processus principal" as Main
 robust "Moteur Java" as Java
@@ -32,9 +41,9 @@ Main is "Réponse IPC"
 
 @1250
 Editeur is Affichage
-Main is Inactif
 
 @1500
 Editeur is Repos
+Main is Inactif
 
 @enduml

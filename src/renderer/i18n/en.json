@@ -16,6 +16,8 @@
   "toolbar.template": "Template",
   "toolbar.templatePlaceholder": "Insert a template…",
   "template.confirmReplace": "Replace the editor content with this template? Unsaved changes will be lost.",
+  "template.category.structurel": "Structure diagrams",
+  "template.category.comportemental": "Behaviour diagrams",
   "toolbar.noFile": "No file open",
 
   "panel.files": "Files",

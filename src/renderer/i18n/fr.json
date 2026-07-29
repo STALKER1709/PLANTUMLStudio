@@ -16,6 +16,8 @@
   "toolbar.template": "Modèle",
   "toolbar.templatePlaceholder": "Insérer un modèle…",
   "template.confirmReplace": "Remplacer le contenu de l’éditeur par ce modèle ? Les modifications non enregistrées seront perdues.",
+  "template.category.structurel": "Diagrammes structurels",
+  "template.category.comportemental": "Diagrammes comportementaux",
   "toolbar.noFile": "Aucun fichier ouvert",
 
   "panel.files": "Fichiers",

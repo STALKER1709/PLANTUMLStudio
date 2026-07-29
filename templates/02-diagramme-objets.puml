@@ -1,7 +1,13 @@
 ' Diagramme d'objets — instantané d'instances à un moment donné
+' @categorie structurel
 @startuml
 title Instantané — commande n° 2024-0157
 
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Une instance se nomme « nomInstance : Classe » et son nom est souligné.
 object "client : Client" as client {
   identifiant = "3f2a-91cd"
   nom = "Dupont"
@@ -36,6 +42,8 @@ object "ecran : Produit" as ecran {
   prix = 249.00
 }
 
+' Les liens sont les instances des associations du diagramme de classes :
+' ils en reprennent la nature (composition, référence) sans multiplicités.
 client -- commande
 commande *-- ligne1
 commande *-- ligne2

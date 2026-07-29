@@ -1,0 +1,34 @@
+' Diagramme de communication — échanges numérotés entre rôles
+' @categorie comportemental
+@startuml
+title Authentification — vue communication
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Un rôle est identifié par « <nom de rôle> : <nom du type> » et se représente
+' par un rectangle contenant le nom et le type de l'instance.
+object "utilisateur : Acteur" as U
+object "ihm : InterfaceWeb" as UI
+object "auth : ServiceAuth" as Auth
+object "bd : BaseUtilisateurs" as DB
+
+' Les connecteurs sont des traits reliant les rôles ; les messages portés
+' au-dessus sont numérotés dans leur ordre d'envoi, la flèche donnant le sens.
+U --> UI : 1 : saisirIdentifiants()
+UI --> Auth : 2 : authentifier(id, motDePasse)
+Auth --> DB : 2.1 : rechercherUtilisateur(id)
+DB --> Auth : 2.2 : utilisateur
+Auth --> Auth : 2.3 : genererJeton()
+Auth --> UI : 3 : jetonDeSession
+UI --> U : 4 : afficherTableauDeBord()
+
+note bottom
+  Même scénario que le diagramme de séquence, vu sous l'angle
+  des liens entre rôles plutôt que de la chronologie.
+  La numérotation hiérarchique (2.1, 2.2…) marque l'imbrication
+  des appels.
+end note
+
+@enduml

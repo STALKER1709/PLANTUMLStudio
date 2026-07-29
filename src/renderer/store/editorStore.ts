@@ -29,8 +29,11 @@ export const useEditorStore = create<EditorState>()((set) => ({
   openFile: (filePath, content) =>
     set({ filePath, content, savedContent: content, revealLine: null }),
 
+  // Un brouillon neuf n'est pas « modifié » : son contenu de référence est
+  // celui qu'on vient d'y placer. Sans cela, l'application demanderait
+  // confirmation avant d'insérer un modèle alors que rien n'a été saisi.
   openDraft: (content = NEW_FILE_TEMPLATE) =>
-    set({ filePath: null, content, savedContent: '', revealLine: null }),
+    set({ filePath: null, content, savedContent: content, revealLine: null }),
 
   setContent: (content) => set({ content }),
 

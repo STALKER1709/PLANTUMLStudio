@@ -1,0 +1,43 @@
+' Diagramme de structure composite — organisation interne d'un classeur
+' @categorie structurel
+@startuml
+title Composant « Traitement de commande » — structure interne
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Formalisme retenu, par extension de celui du diagramme de composants :
+'   - le classeur englobant est un cadre nommé ;
+'   - les parties internes sont des composants « nom : Type » ;
+'   - les ports sont des carrés posés sur la frontière du cadre ;
+'   - les connecteurs sont des traits pleins entre parties.
+component "TraitementCommande" as tc {
+
+  portin " Commande reçue " as entree
+  portout " Facture émise " as sortie
+
+  component "validateur : ValidateurCommande" as validateur
+  component "calcul : CalculateurTarif" as calcul
+  component "facturier : Facturier" as facturier
+
+  entree --> validateur
+  validateur --> calcul : commande validée
+  calcul --> facturier : montant total
+  facturier --> sortie
+}
+
+' Interfaces requises et fournies par le classeur englobant.
+interface "ICatalogue" as catalogue
+interface "IJournal" as journal
+
+calcul ..> catalogue : requiert
+facturier -up-> journal : fournit
+
+note bottom of tc
+  Les parties n'existent que dans le contexte
+  du classeur englobant : leur cycle de vie
+  est celui de « TraitementCommande ».
+end note
+
+@enduml

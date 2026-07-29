@@ -1,0 +1,57 @@
+' Vue d'ensemble des interactions — enchaînement de scénarios d'interaction
+' @categorie comportemental
+@startuml
+title Passage d'une commande — vue d'ensemble des interactions
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Formalisme retenu, par extension de celui du diagramme d'activité :
+'   - la structure de contrôle (début, décisions, fin) suit le formalisme
+'     du diagramme d'activité ;
+'   - chaque nœud « ref sd <nom> » renvoie à un diagramme de séquence
+'     existant plutôt que de décrire une action élémentaire.
+start
+
+:ref
+sd Authentifier l'utilisateur;
+
+if (Authentification réussie ?) then (oui)
+
+  :ref
+  sd Constituer le panier;
+
+  :ref
+  sd Vérifier la disponibilité;
+
+  if (Articles disponibles ?) then (oui)
+    fork
+      :ref
+      sd Encaisser le paiement;
+    fork again
+      :ref
+      sd Réserver le stock;
+    end fork
+
+    :ref
+    sd Confirmer la commande;
+  else (non)
+    :ref
+    sd Proposer un réapprovisionnement;
+  endif
+
+else (non)
+  :ref
+  sd Refuser l'accès;
+endif
+
+stop
+
+note right
+  Chaque nœud « ref » désigne un diagramme
+  de séquence décrit par ailleurs : cette vue
+  n'en montre que l'enchaînement.
+end note
+
+@enduml

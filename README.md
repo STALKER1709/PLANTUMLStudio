@@ -12,7 +12,8 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Panneau d'erreurs **en français**, avec numéro de ligne cliquable qui positionne le curseur
 - Arborescence de projet : création, renommage, suppression de fichiers `.puml`
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
-- 10 modèles commentés en français (classes, séquence, cas d'utilisation, activité, composants, déploiement, états, objets, temps, paquets)
+- **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
+  formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))
 - Thème clair / sombre, interface en français et en anglais
 - Aucune connexion réseau : garantie vérifiée par un scan statique et par le blocage des requêtes sortantes au runtime
 
@@ -131,12 +132,13 @@ est refusée si elle sort du dossier du projet ouvert (`FileService.isWithin`).
 ## Structure du projet
 
 ```
+docs/formalisme.md  référence du formalisme appliqué aux 14 diagrammes
 src/
   main/          processus principal (services, IPC, fenêtre, logger)
   preload/       pont contextBridge (sandboxé, sans import relatif)
   renderer/      application React (composants, stores Zustand, hooks, i18n, styles)
   shared/        types et constantes communs — sans dépendance Electron ni Node
-templates/       10 modèles .puml commentés en français
+templates/       14 modèles .puml (+ _formalisme.puml, réglages communs)
 resources/       plantuml.jar, jre/, graphviz/ (non versionnés — voir resources/README.md)
 scripts/         téléchargement des ressources et vérification hors ligne
 tests/unit/      Vitest — services du main process
@@ -146,7 +148,8 @@ tests/e2e/       Playwright — application Electron complète
 ## Tests
 
 ```bash
-npm test                 # 36 tests unitaires, sans Java ni plantuml.jar (le moteur est simulé)
+npm test                 # tests unitaires ; le rendu réel des 14 modèles n’est joué
+                         # que si resources/plantuml.jar est présent
 npm run build && npm run test:e2e
 ```
 

@@ -1,0 +1,55 @@
+' Diagramme de séquence — échanges chronologiques entre lignes de vie
+' @categorie comportemental
+@startuml
+title Authentification d'un utilisateur
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+' Notation stricte : pointe pleine = synchrone, pointe fine = asynchrone.
+skinparam style strictuml
+
+' Ligne de vie d'un acteur et lignes de vie d'objets. Le temps s'écoule
+' de haut en bas.
+actor "Utilisateur" as U
+participant "ihm : InterfaceWeb" as UI
+participant "auth : ServiceAuth" as Auth
+database "bd : BaseUtilisateurs" as DB
+
+autonumber "<b>[00]"
+
+U -> UI : saisit identifiant et mot de passe
+' L'activation (rectangle sur la ligne de vie) indique que l'objet travaille.
+activate UI
+
+UI -> Auth : authentifier(identifiant, motDePasse)
+activate Auth
+
+Auth -> DB : rechercherUtilisateur(identifiant)
+activate DB
+' Message de retour : trait interrompu, il clôt l'activation.
+DB --> Auth : utilisateur
+deactivate DB
+
+' L'opérateur alt : test à plusieurs alternatives, séparées par « else ».
+alt mot de passe valide
+  ' Message récursif : l'objet s'envoie un message à lui-même.
+  Auth -> Auth : genererJeton()
+  Auth --> UI : jeton de session
+  UI --> U : accès au tableau de bord
+  ' Message asynchrone : l'émetteur n'attend pas de réponse.
+  Auth ->> DB : journaliserConnexion(identifiant)
+else mot de passe invalide
+  Auth --> UI : erreur 401
+  UI --> U : message « identifiants incorrects »
+end
+
+deactivate Auth
+deactivate UI
+
+note over Auth, DB
+  Le mot de passe n'est jamais stocké en clair :
+  seule une empreinte est comparée.
+end note
+
+@enduml

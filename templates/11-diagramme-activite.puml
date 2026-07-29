@@ -1,0 +1,60 @@
+' Diagramme d'activité — enchaînement des opérations, réparties en couloirs
+' @categorie comportemental
+@startuml
+title Traitement d'une demande de congés
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+
+' Les couloirs (swimlanes) rangent chaque activité sous l'acteur ou l'objet
+' qui l'exécute. Ils sont séparés par des droites verticales.
+|Salarié|
+' L'état initial, cercle plein, marque le point d'entrée. Il est unique.
+start
+:Déposer une demande de congés;
+
+|Système RH|
+:Contrôler le solde de congés;
+
+' La décision, en losange, oriente le flux selon le résultat d'un test.
+if (Solde suffisant ?) then (oui)
+  :Notifier le responsable;
+
+  |Responsable|
+  while (Décision prise ?) is (non)
+    :Attendre 24 h;
+    :Relancer le responsable;
+  endwhile (oui)
+
+  if (Demande acceptée ?) then (oui)
+    |Système RH|
+    ' Barre de synchronisation : les deux activités sont concurrentes.
+    fork
+      :Mettre à jour le planning;
+    fork again
+      :Décrémenter le solde;
+    end fork
+    |Salarié|
+    :Recevoir l'accord;
+  else (non)
+    |Salarié|
+    :Recevoir le refus motivé;
+  endif
+
+else (non)
+  |Système RH|
+  :Rejeter automatiquement;
+  note right
+    Aucun responsable n'est
+    sollicité dans ce cas.
+  end note
+endif
+
+|Système RH|
+:Archiver la demande;
+
+' L'état final ferme le déroulement ; il peut y en avoir plusieurs.
+stop
+
+@enduml

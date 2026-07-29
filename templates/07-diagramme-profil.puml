@@ -1,0 +1,53 @@
+' Diagramme de profil — extension du métamodèle par stéréotypes
+' @categorie structurel
+@startuml
+title Profil « Application hors ligne »
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam packageStyle folder
+
+' Formalisme retenu, par extension de celui du diagramme de classes :
+'   - une métaclasse est une classe portant le stéréotype <<metaclass>> ;
+'   - un stéréotype est une classe portant le stéréotype <<stereotype>> ;
+'   - ses attributs sont les valeurs marquées (tagged values) ;
+'   - l'extension se note par une flèche d'héritage étiquetée <<extend>>.
+package "Profil HorsLigne" <<Profile>> {
+
+  class Component <<metaclass>>
+  class Artifact <<metaclass>>
+
+  class ServiceLocal <<stereotype>> {
+    + binaireEmbarque : Boolean
+    + versionMinimale : String
+  }
+
+  class RessourceEmbarquee <<stereotype>> {
+    + empreinteSHA256 : String
+    + licence : String
+  }
+
+  class SansReseau <<stereotype>>
+
+  ServiceLocal -up-|> Component : <<extend>>
+  RessourceEmbarquee -up-|> Artifact : <<extend>>
+  SansReseau -up-|> Component : <<extend>>
+}
+
+' Application du profil : les éléments modélisés portent les stéréotypes définis.
+package "Modèle PlantUML Studio" {
+  class PlantUMLService <<ServiceLocal>> <<SansReseau>>
+  class "plantuml.jar" as Jar <<RessourceEmbarquee>>
+
+  PlantUMLService ..> Jar : exécute
+}
+
+note bottom
+  Un profil ne modifie pas le métamodèle UML :
+  il l'étend par des stéréotypes applicables
+  à des métaclasses existantes.
+end note
+
+@enduml

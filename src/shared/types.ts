@@ -97,10 +97,15 @@ export interface ExportResult {
   errors?: PlantUMLError[];
 }
 
+/** Les 14 diagrammes UML 2.5 se répartissent en deux familles. */
+export type DiagramCategory = 'structurel' | 'comportemental';
+
 export interface TemplateSummary {
   id: string;
   /** Libellé affiché dans le sélecteur de diagramme. */
   label: string;
+  /** Famille UML, déclarée par « ' @categorie … » en tête de modèle. */
+  category: DiagramCategory;
   fileName: string;
 }
 

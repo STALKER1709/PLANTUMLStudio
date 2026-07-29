@@ -1,0 +1,54 @@
+' Diagramme de paquetages — organisation du système en catégories
+' @categorie structurel
+@startuml
+title Organisation des sources
+
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam shadowing false
+' « Il est représenté par un dossier avec son nom à l'intérieur. »
+skinparam packageStyle folder
+
+package "src" {
+
+  ' Les paquetages peuvent s'imbriquer ; chaque nom doit être unique.
+  package "main" as Main {
+    package "services" as Services
+    package "ipc" as Ipc
+    package "windows" as Windows
+    package "utils" as Utils
+  }
+
+  package "preload" as Preload
+
+  package "renderer" as Renderer {
+    package "components" as Composants
+    package "store" as Store
+    package "hooks" as Hooks
+    package "i18n" as I18n
+  }
+
+  package "shared" as Shared
+}
+
+' Dépendance : trait interrompu fléché du paquetage client vers le fournisseur.
+Ipc ..> Services
+Ipc ..> Utils
+Services ..> Utils
+Windows ..> Utils
+Main ..> Shared
+Preload ..> Shared
+Renderer ..> Shared
+
+Composants ..> Store
+Composants ..> Hooks
+Composants ..> I18n
+Hooks ..> Preload : window.electronAPI
+
+note bottom of Shared
+  « shared » ne dépend ni d'Electron
+  ni de Node : il est compilé aussi
+  bien par tsc que par Vite.
+end note
+
+@enduml
