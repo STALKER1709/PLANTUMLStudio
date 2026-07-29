@@ -14,6 +14,8 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))
+- Formalisme **appliqué automatiquement à toute source**, y compris écrite à la main : aucune
+  ligne de `skinparam` à recopier, et une bascule pour revenir au rendu PlantUML par défaut
 - Thème clair / sombre, interface en français et en anglais
 - Aucune connexion réseau : garantie vérifiée par un scan statique et par le blocage des requêtes sortantes au runtime
 

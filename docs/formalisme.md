@@ -62,10 +62,25 @@ directive : les connecteurs restent courbes et le diagramme demeure correct, mai
 s'éloigne des outils de modélisation classiques. C'est la seule différence visuelle notable
 entre les deux moteurs — raison pour laquelle Graphviz est recommandé sans être exigé.
 
-Les modèles recopient ces réglages en clair plutôt que d'inclure un fichier commun : chacun
-reste autonome, y compris déplacé hors de son projet. Pour mutualiser, copiez
-`templates/_formalisme.puml` à la racine de votre projet puis `!include _formalisme.puml` —
-les inclusions sont autorisées dans le dossier du projet ouvert, et nulle part ailleurs.
+### Application automatique
+
+**Le formalisme n'a pas besoin d'être présent dans votre source.** L'application le passe à
+PlantUML par l'option `-config`, qui applique un fichier de réglages à toute source rendue
+sans la modifier : un diagramme écrit ou collé à la main sort donc dans le formalisme commun,
+sans une ligne de `skinparam`.
+
+Le fichier appliqué est `templates/_formalisme.puml`. La bascule **« Formalisme »** de la
+barre d'outils le désactive à la demande — la source est alors rendue avec les réglages par
+défaut de PlantUML. Le choix est mémorisé et vaut aussi pour les exports PNG, SVG, PDF et ZIP.
+
+Les réglages que votre source déclare elle-même sont lus **après** ceux du fichier commun :
+ils l'emportent donc. Un `skinparam actorStyle awesome` dans votre diagramme reste appliqué.
+
+Les modèles livrés recopient malgré tout ces réglages en clair : chacun reste ainsi autonome,
+y compris ouvert dans un autre outil PlantUML. Pour mutualiser dans vos propres fichiers,
+copiez `templates/_formalisme.puml` à la racine de votre projet puis
+`!include _formalisme.puml` — les inclusions sont autorisées dans le dossier du projet ouvert,
+et nulle part ailleurs.
 
 ## 2. Les 7 diagrammes du document
 

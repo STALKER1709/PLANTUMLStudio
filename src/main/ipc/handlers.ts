@@ -103,10 +103,15 @@ export function registerIpcHandlers(context: IpcContext): void {
   // ---------------------------------------------------------------- Rendu
   ipcMain.handle(
     IPC_CHANNELS.RENDER_DIAGRAM,
-    async (_event, source: string, format: DiagramFormat = 'svg'): Promise<RenderResult> => {
+    async (
+      _event,
+      source: string,
+      format: DiagramFormat = 'svg',
+      applyFormalism = true
+    ): Promise<RenderResult> => {
       const engineFormat: EngineFormat = format === 'png' ? 'png' : 'svg';
       try {
-        return await plantuml.render(source, engineFormat);
+        return await plantuml.render(source, engineFormat, { applyFormalism });
       } catch (error) {
         return {
           success: false,
@@ -262,7 +267,12 @@ export function registerIpcHandlers(context: IpcContext): void {
   // --------------------------------------------------------------- Export
   ipcMain.handle(
     IPC_CHANNELS.EXPORT_DIAGRAM,
-    async (_event, source: string, format: DiagramFormat): Promise<IpcResult<ExportResult>> => {
+    async (
+      _event,
+      source: string,
+      format: DiagramFormat,
+      applyFormalism = true
+    ): Promise<IpcResult<ExportResult>> => {
       try {
         const window = context.getMainWindow();
         const defaultDirectory = currentProject
@@ -285,6 +295,7 @@ export function registerIpcHandlers(context: IpcContext): void {
           source,
           format,
           targetPath: selection.filePath,
+          applyFormalism,
         });
         return result.success ? ok(result) : { ok: false, error: describeExportFailure(result) };
       } catch (error) {
@@ -295,7 +306,12 @@ export function registerIpcHandlers(context: IpcContext): void {
 
   ipcMain.handle(
     IPC_CHANNELS.EXPORT_PROJECT,
-    async (_event, filePaths: string[], format: DiagramFormat): Promise<IpcResult<ExportResult>> => {
+    async (
+      _event,
+      filePaths: string[],
+      format: DiagramFormat,
+      applyFormalism = true
+    ): Promise<IpcResult<ExportResult>> => {
       try {
         if (!currentProject) throw new Error('Aucun projet ouvert.');
         filePaths.forEach((filePath) => assertInsideProject(files, filePath));
@@ -321,6 +337,7 @@ export function registerIpcHandlers(context: IpcContext): void {
           files: targets,
           format,
           targetPath: selection.filePath,
+          applyFormalism,
         });
         return result.success ? ok(result) : { ok: false, error: describeExportFailure(result) };
       } catch (error) {

@@ -15,6 +15,8 @@
   "toolbar.language": "Language",
   "toolbar.template": "Template",
   "toolbar.templatePlaceholder": "Insert a template…",
+  "toolbar.formalism": "House style",
+  "toolbar.formalismHint": "Applies the shared formalism to every diagram, including hand-written ones. Turn off to render the source as-is.",
   "template.confirmReplace": "Replace the editor content with this template? Unsaved changes will be lost.",
   "template.category.structurel": "Structure diagrams",
   "template.category.comportemental": "Behaviour diagrams",

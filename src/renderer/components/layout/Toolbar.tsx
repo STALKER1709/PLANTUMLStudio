@@ -26,11 +26,13 @@ export function Toolbar() {
   const toggleTheme = useSettingsStore((state) => state.toggleTheme);
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
+  const applyFormalism = useSettingsStore((state) => state.applyFormalism);
+  const setApplyFormalism = useSettingsStore((state) => state.setApplyFormalism);
   const exportFormat = useSettingsStore((state) => state.exportFormat);
   const setExportFormat = useSettingsStore((state) => state.setExportFormat);
 
   const exportDiagram = async () => {
-    const result = await window.electronAPI.exportDiagram(content, exportFormat);
+    const result = await window.electronAPI.exportDiagram(content, exportFormat, applyFormalism);
     if (!result.ok) {
       if (result.error && !/annul/i.test(result.error)) {
         useToastStore.getState().push('error', t('toast.error', { message: result.error }));
@@ -44,7 +46,7 @@ export function Toolbar() {
 
   const exportProject = async () => {
     // Liste vide : le main process exporte alors tout le projet.
-    const result = await window.electronAPI.exportProject([], exportFormat);
+    const result = await window.electronAPI.exportProject([], exportFormat, applyFormalism);
     if (!result.ok) {
       if (result.error && !/annul/i.test(result.error)) {
         useToastStore.getState().push('error', t('toast.error', { message: result.error }));
@@ -104,6 +106,16 @@ export function Toolbar() {
 
       <span className="group">
         <DiagramTypeSelector isDirty={isDirty} onInsert={setContent} />
+        {/* Le formalisme s'applique à toute source, y compris saisie à la main. */}
+        <button
+          type="button"
+          className={applyFormalism ? 'primary' : undefined}
+          aria-pressed={applyFormalism}
+          title={t('toolbar.formalismHint')}
+          onClick={() => setApplyFormalism(!applyFormalism)}
+        >
+          {t('toolbar.formalism')}
+        </button>
       </span>
 
       <span className="spacer" />

@@ -15,6 +15,8 @@
   "toolbar.language": "Langue",
   "toolbar.template": "Modèle",
   "toolbar.templatePlaceholder": "Insérer un modèle…",
+  "toolbar.formalism": "Formalisme",
+  "toolbar.formalismHint": "Applique le formalisme commun à tous les diagrammes, même écrits à la main. Désactivez pour rendre la source telle quelle.",
   "template.confirmReplace": "Remplacer le contenu de l’éditeur par ce modèle ? Les modifications non enregistrées seront perdues.",
   "template.category.structurel": "Diagrammes structurels",
   "template.category.comportemental": "Diagrammes comportementaux",

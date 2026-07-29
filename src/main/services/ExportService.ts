@@ -26,10 +26,10 @@ export class ExportService {
 
   /** Exporte un diagramme unique vers `targetPath`. */
   async exportDiagram(request: ExportRequest): Promise<ExportResult> {
-    const { source, format, targetPath } = request;
+    const { source, format, targetPath, applyFormalism = true } = request;
 
     if (format === 'pdf') {
-      const svg = await this.plantuml.renderToBuffer(source, 'svg');
+      const svg = await this.plantuml.renderToBuffer(source, 'svg', { applyFormalism });
       if (!svg.success || !svg.buffer) {
         return { success: false, errors: svg.errors };
       }
@@ -39,7 +39,9 @@ export class ExportService {
       return { success: true, outputPath: targetPath };
     }
 
-    const result = await this.plantuml.renderToFile(source, format as EngineFormat, targetPath);
+    const result = await this.plantuml.renderToFile(source, format as EngineFormat, targetPath, {
+      applyFormalism,
+    });
     return result.success
       ? { success: true, outputPath: result.outputPath }
       : { success: false, errors: result.errors };
@@ -51,7 +53,7 @@ export class ExportService {
    * `failures` et l'archive contient les diagrammes valides.
    */
   async exportProject(request: ExportProjectRequest): Promise<ExportResult> {
-    const { files, format, targetPath } = request;
+    const { files, format, targetPath, applyFormalism = true } = request;
     const zip = new AdmZip();
     const failures: Array<{ file: string; reason: string }> = [];
     let exported = 0;
@@ -59,7 +61,7 @@ export class ExportService {
     for (const file of files) {
       try {
         const source = await fs.readFile(file, 'utf-8');
-        const buffer = await this.renderToBufferForFormat(source, format);
+        const buffer = await this.renderToBufferForFormat(source, format, applyFormalism);
         const entryName = `${path.basename(file, path.extname(file))}.${format}`;
         zip.addFile(entryName, buffer);
         exported += 1;
@@ -94,16 +96,20 @@ export class ExportService {
   }
 
   /** Rend un diagramme dans le format demandé et retourne les octets produits. */
-  async renderToBufferForFormat(source: string, format: DiagramFormat): Promise<Buffer> {
+  async renderToBufferForFormat(
+    source: string,
+    format: DiagramFormat,
+    applyFormalism = true
+  ): Promise<Buffer> {
     if (format === 'pdf') {
-      const svg = await this.plantuml.renderToBuffer(source, 'svg');
+      const svg = await this.plantuml.renderToBuffer(source, 'svg', { applyFormalism });
       if (!svg.success || !svg.buffer) {
         throw new Error(svg.errors?.map((error) => error.message).join(' ') ?? 'Rendu SVG échoué.');
       }
       return this.svgToPdfBuffer(svg.buffer.toString('utf-8'));
     }
 
-    const result = await this.plantuml.renderToBuffer(source, format);
+    const result = await this.plantuml.renderToBuffer(source, format, { applyFormalism });
     if (!result.success || !result.buffer) {
       throw new Error(
         result.errors?.map((error) => error.message).join(' ') ?? 'Rendu du diagramme échoué.'

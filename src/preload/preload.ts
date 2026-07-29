@@ -30,8 +30,8 @@ const CHANNELS = {
 } as const;
 
 const api: ElectronAPI = {
-  renderDiagram: (source: string, format: DiagramFormat) =>
-    ipcRenderer.invoke(CHANNELS.RENDER_DIAGRAM, source, format),
+  renderDiagram: (source: string, format: DiagramFormat, applyFormalism = true) =>
+    ipcRenderer.invoke(CHANNELS.RENDER_DIAGRAM, source, format, applyFormalism),
 
   openProject: () => ipcRenderer.invoke(CHANNELS.OPEN_PROJECT),
   createProject: () => ipcRenderer.invoke(CHANNELS.CREATE_PROJECT),
@@ -47,10 +47,10 @@ const api: ElectronAPI = {
   renameFile: (oldPath: string, newName: string) =>
     ipcRenderer.invoke(CHANNELS.RENAME_FILE, oldPath, newName),
 
-  exportDiagram: (source: string, format: DiagramFormat) =>
-    ipcRenderer.invoke(CHANNELS.EXPORT_DIAGRAM, source, format),
-  exportProject: (files: string[], format: DiagramFormat) =>
-    ipcRenderer.invoke(CHANNELS.EXPORT_PROJECT, files, format),
+  exportDiagram: (source: string, format: DiagramFormat, applyFormalism = true) =>
+    ipcRenderer.invoke(CHANNELS.EXPORT_DIAGRAM, source, format, applyFormalism),
+  exportProject: (files: string[], format: DiagramFormat, applyFormalism = true) =>
+    ipcRenderer.invoke(CHANNELS.EXPORT_PROJECT, files, format, applyFormalism),
 
   checkEnvironment: () => ipcRenderer.invoke(CHANNELS.CHECK_ENVIRONMENT),
   listTemplates: () => ipcRenderer.invoke(CHANNELS.LIST_TEMPLATES),

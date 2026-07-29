@@ -35,6 +35,17 @@ export interface PlantUMLServiceOptions {
   timeoutMs?: number;
   /** Dossier autorisé pour les `!include` (généralement la racine du projet). */
   includePath?: string | null;
+  /**
+   * Fichier de réglages appliqué à toute source rendue, via l'option `-config`
+   * de PlantUML. C'est ce qui donne le formalisme commun aux diagrammes que
+   * l'utilisateur écrit lui-même, sans modifier son texte.
+   */
+  formalismConfigPath?: string | null;
+}
+
+export interface RenderOptions {
+  /** `false` rend la source telle quelle, avec les réglages PlantUML par défaut. */
+  applyFormalism?: boolean;
 }
 
 interface BufferRenderOutcome {
@@ -81,6 +92,7 @@ export class PlantUMLService {
   private readonly tmpDir: string;
   private readonly timeoutMs: number;
   private includePath: string | null;
+  private readonly formalismConfigPath: string | null;
 
   constructor(options: PlantUMLServiceOptions = {}) {
     this.resourcesPath =
@@ -93,6 +105,7 @@ export class PlantUMLService {
     this.tmpDir = options.tmpDir ?? path.join(os.tmpdir(), 'plantuml-studio');
     this.timeoutMs = options.timeoutMs ?? 20_000;
     this.includePath = options.includePath ?? null;
+    this.formalismConfigPath = options.formalismConfigPath ?? null;
   }
 
   /**
@@ -145,9 +158,13 @@ export class PlantUMLService {
    * Rend un diagramme en mémoire (mode `-pipe`, aucun fichier temporaire).
    * C'est le chemin utilisé par la prévisualisation temps réel.
    */
-  async render(source: string, format: EngineFormat = 'svg'): Promise<RenderResult> {
+  async render(
+    source: string,
+    format: EngineFormat = 'svg',
+    options: RenderOptions = {}
+  ): Promise<RenderResult> {
     const startedAt = Date.now();
-    const outcome = await this.renderToBuffer(source, format);
+    const outcome = await this.renderToBuffer(source, format, options);
     const durationMs = Date.now() - startedAt;
 
     if (!outcome.success || !outcome.buffer) {
@@ -166,10 +183,11 @@ export class PlantUMLService {
   async renderToFile(
     source: string,
     format: EngineFormat,
-    targetPath: string
+    targetPath: string,
+    options: RenderOptions = {}
   ): Promise<RenderResult> {
     const startedAt = Date.now();
-    const outcome = await this.renderToBuffer(source, format);
+    const outcome = await this.renderToBuffer(source, format, options);
 
     if (!outcome.success || !outcome.buffer) {
       return { success: false, format, errors: outcome.errors, durationMs: Date.now() - startedAt };
@@ -191,7 +209,11 @@ export class PlantUMLService {
    * Exécute plantuml.jar et récupère la sortie binaire.
    * Public pour permettre à `ExportService` de convertir un SVG en PDF.
    */
-  async renderToBuffer(source: string, format: EngineFormat): Promise<BufferRenderOutcome> {
+  async renderToBuffer(
+    source: string,
+    format: EngineFormat,
+    options: RenderOptions = {}
+  ): Promise<BufferRenderOutcome> {
     if (!fs.existsSync(this.jarPath)) {
       return {
         success: false,
@@ -206,7 +228,7 @@ export class PlantUMLService {
 
     const javaPath = this.getJavaPath();
     const dotPath = this.getDotBinaryPath();
-    const args = this.buildArgs(format, dotPath !== null);
+    const args = this.buildArgs(format, dotPath !== null, options.applyFormalism !== false);
 
     return new Promise<BufferRenderOutcome>((resolve) => {
       const env = { ...process.env };
@@ -289,7 +311,11 @@ export class PlantUMLService {
     return this.tmpDir;
   }
 
-  private buildArgs(format: EngineFormat, graphvizAvailable: boolean): string[] {
+  private buildArgs(
+    format: EngineFormat,
+    graphvizAvailable: boolean,
+    applyFormalism: boolean
+  ): string[] {
     const args = [
       '-Djava.awt.headless=true',
       ...this.buildSecurityArgs(),
@@ -306,6 +332,12 @@ export class PlantUMLService {
 
     // Repli 100 % Java lorsqu'aucun Graphviz n'est disponible.
     if (!graphvizAvailable) args.push('-Playout=smetana');
+
+    // Formalisme commun : appliqué à la source sans la modifier. Les réglages
+    // que la source déclare elle-même sont lus après, et l'emportent donc.
+    if (applyFormalism && this.formalismConfigPath && fs.existsSync(this.formalismConfigPath)) {
+      args.push('-config', this.formalismConfigPath);
+    }
 
     return args;
   }

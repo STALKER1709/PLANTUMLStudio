@@ -15,6 +15,11 @@ interface SettingsState {
   debounceMs: number;
   /** Rendu automatique ; désactivé, la prévisualisation se met à jour à l'enregistrement. */
   autoRender: boolean;
+  /**
+   * Applique le formalisme commun à toute source rendue ou exportée, y compris
+   * celles écrites à la main. Désactivé, PlantUML rend avec ses réglages par défaut.
+   */
+  applyFormalism: boolean;
 
   setTheme(theme: ThemeName): void;
   toggleTheme(): void;
@@ -22,6 +27,7 @@ interface SettingsState {
   setExportFormat(format: DiagramFormat): void;
   setDebounceMs(delay: number): void;
   setAutoRender(enabled: boolean): void;
+  setApplyFormalism(enabled: boolean): void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -32,6 +38,7 @@ export const useSettingsStore = create<SettingsState>()(
       exportFormat: 'png',
       debounceMs: DEFAULT_RENDER_DEBOUNCE_MS,
       autoRender: true,
+      applyFormalism: true,
 
       setTheme: (theme) => {
         applyTheme(theme);
@@ -42,6 +49,7 @@ export const useSettingsStore = create<SettingsState>()(
       setExportFormat: (exportFormat) => set({ exportFormat }),
       setDebounceMs: (debounceMs) => set({ debounceMs: Math.min(Math.max(debounceMs, 100), 3000) }),
       setAutoRender: (autoRender) => set({ autoRender }),
+      setApplyFormalism: (applyFormalism) => set({ applyFormalism }),
     }),
     {
       name: 'plantuml-studio-settings',

@@ -181,6 +181,34 @@ describe('PlantUMLService', () => {
     expect(service.getLayoutEngine()).toBe('graphviz');
   });
 
+  it('applique le formalisme commun à une source qui n’en déclare pas', async () => {
+    mockJavaRun({ stdout: SVG_SAMPLE });
+    const configPath = path.join(resourcesPath, '_formalisme.puml');
+    fs.writeFileSync(configPath, 'skinparam shadowing false');
+    const service = createService({ formalismConfigPath: configPath });
+
+    await service.render('@startuml\nclass A\n@enduml', 'svg');
+    const [, withFormalism] = spawnMock.mock.calls[0];
+    expect(withFormalism).toContain('-config');
+    expect(withFormalism).toContain(configPath);
+
+    // Le formalisme se désactive à la demande : la source est alors rendue
+    // avec les réglages par défaut de PlantUML.
+    await service.render('@startuml\nclass A\n@enduml', 'svg', { applyFormalism: false });
+    const [, without] = spawnMock.mock.calls[1];
+    expect(without).not.toContain('-config');
+  });
+
+  it('ignore un fichier de formalisme absent plutôt que d’échouer', async () => {
+    mockJavaRun({ stdout: SVG_SAMPLE });
+    const service = createService({ formalismConfigPath: '/chemin/inexistant.puml' });
+
+    const result = await service.render('@startuml\nclass A\n@enduml', 'svg');
+
+    expect(result.success).toBe(true);
+    expect(spawnMock.mock.calls[0][1]).not.toContain('-config');
+  });
+
   it('limite les accès disque au dossier du projet ouvert', async () => {
     mockJavaRun({ stdout: SVG_SAMPLE });
     const service = createService();

@@ -20,6 +20,7 @@ export function App() {
   const theme = useSettingsStore((state) => state.theme);
   const debounceMs = useSettingsStore((state) => state.debounceMs);
   const autoRender = useSettingsStore((state) => state.autoRender);
+  const applyFormalism = useSettingsStore((state) => state.applyFormalism);
 
   const content = useEditorStore((state) => state.content);
   const setContent = useEditorStore((state) => state.setContent);
@@ -98,6 +99,7 @@ export function App() {
             pumlSource={content}
             debounceMs={debounceMs}
             enabled={autoRender}
+            applyFormalism={applyFormalism}
             onGotoLine={requestRevealLine}
           />
         }

@@ -79,6 +79,8 @@ export interface ExportRequest {
   format: DiagramFormat;
   /** Chemin de destination complet, extension incluse. */
   targetPath: string;
+  /** Applique le formalisme commun au rendu exporté. */
+  applyFormalism?: boolean;
 }
 
 export interface ExportProjectRequest {
@@ -87,6 +89,8 @@ export interface ExportProjectRequest {
   format: DiagramFormat;
   /** Chemin de l'archive `.zip` à produire. */
   targetPath: string;
+  /** Applique le formalisme commun aux rendus exportés. */
+  applyFormalism?: boolean;
 }
 
 export interface ExportResult {
@@ -127,7 +131,11 @@ export interface IpcResult<T> {
  * Toute évolution ici doit être répercutée dans `src/preload/preload.ts`.
  */
 export interface ElectronAPI {
-  renderDiagram(source: string, format: DiagramFormat): Promise<RenderResult>;
+  renderDiagram(
+    source: string,
+    format: DiagramFormat,
+    applyFormalism?: boolean
+  ): Promise<RenderResult>;
 
   openProject(): Promise<IpcResult<Project>>;
   createProject(): Promise<IpcResult<Project>>;
@@ -140,8 +148,16 @@ export interface ElectronAPI {
   deleteFile(filePath: string): Promise<IpcResult<null>>;
   renameFile(oldPath: string, newName: string): Promise<IpcResult<string>>;
 
-  exportDiagram(source: string, format: DiagramFormat): Promise<IpcResult<ExportResult>>;
-  exportProject(files: string[], format: DiagramFormat): Promise<IpcResult<ExportResult>>;
+  exportDiagram(
+    source: string,
+    format: DiagramFormat,
+    applyFormalism?: boolean
+  ): Promise<IpcResult<ExportResult>>;
+  exportProject(
+    files: string[],
+    format: DiagramFormat,
+    applyFormalism?: boolean
+  ): Promise<IpcResult<ExportResult>>;
 
   checkEnvironment(): Promise<EnvironmentStatus>;
   listTemplates(): Promise<IpcResult<TemplateSummary[]>>;

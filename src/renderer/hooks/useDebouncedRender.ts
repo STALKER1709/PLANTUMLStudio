@@ -28,7 +28,8 @@ const IDLE: RenderState = {
 export function useDebouncedRender(
   source: string,
   delayMs: number = DEFAULT_RENDER_DEBOUNCE_MS,
-  enabled = true
+  enabled = true,
+  applyFormalism = true
 ): RenderState {
   const [state, setState] = useState<RenderState>(IDLE);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,7 +52,7 @@ export function useDebouncedRender(
       const requestId = requestIdRef.current;
 
       window.electronAPI
-        .renderDiagram(source, 'svg')
+        .renderDiagram(source, 'svg', applyFormalism)
         .then((result) => {
           if (requestId !== requestIdRef.current) return;
           setState({
@@ -80,7 +81,7 @@ export function useDebouncedRender(
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [source, delayMs, enabled]);
+  }, [source, delayMs, enabled, applyFormalism]);
 
   return state;
 }

@@ -76,6 +76,9 @@ app.whenReady().then(async () => {
       resourcesPath,
       javaPath: status.javaPath ?? undefined,
       dotPath: status.graphvizPath,
+      // Formalisme appliqué à toute source rendue, y compris celles écrites
+      // ou collées par l'utilisateur.
+      formalismConfigPath: path.join(templatesPath, '_formalisme.puml'),
     });
 
     registerIpcHandlers({

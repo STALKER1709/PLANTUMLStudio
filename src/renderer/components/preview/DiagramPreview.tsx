@@ -12,6 +12,8 @@ export interface DiagramPreviewProps {
   pumlSource: string;
   debounceMs: number;
   enabled: boolean;
+  /** Applique le formalisme commun au rendu. */
+  applyFormalism: boolean;
   onGotoLine(line: number): void;
 }
 
@@ -24,13 +26,15 @@ export function DiagramPreview({
   pumlSource,
   debounceMs,
   enabled,
+  applyFormalism,
   onGotoLine,
 }: DiagramPreviewProps) {
   const { t } = useTranslation();
   const { svgContent, errors, isRendering, durationMs } = useDebouncedRender(
     pumlSource,
     debounceMs,
-    enabled
+    enabled,
+    applyFormalism
   );
 
   const [zoom, setZoom] = useState(1);
