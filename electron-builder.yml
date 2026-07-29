@@ -50,16 +50,20 @@ mac:
 linux:
   # Champ obligatoire pour les paquets .deb et .rpm.
   maintainer: STALKER1709 <144211603+STALKER1709@users.noreply.github.com>
+  # Jeu de tailles normalisées : pointé sur build/icon.png seul, electron-builder
+  # crée un dossier « 1254x1254 » que les thèmes d'icônes freedesktop ignorent,
+  # et le lanceur retombe alors sur une icône générique.
+  icon: build/icons
   target:
     - deb
     - rpm
     - AppImage
-  category: Development
+  # « category » alimente le champ Categories du fichier .desktop.
+  category: Development;IDE;
   desktop:
     entry:
-      Name: PlantUML Studio
-      Comment: Éditeur de diagrammes UML 100 % hors ligne
-      Categories: Development;IDE;
+      # Comment est repris de la description du package.json.
+      Keywords: UML;PlantUML;diagramme;modélisation;
 
 # Aucune publication automatique : les mises à jour se font par installateur
 # transmis hors ligne (clé USB, partage local).
