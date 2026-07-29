@@ -77,6 +77,109 @@ export function plantumlJarPath(resourcesPath: string): string {
   return path.join(resourcesPath, 'plantuml.jar');
 }
 
+/** Dossiers d'installation racine de Windows (Program Files, 32 et 64 bits). */
+function windowsProgramDirectories(environment: NodeJS.ProcessEnv): string[] {
+  return [
+    environment.ProgramW6432,
+    environment.ProgramFiles,
+    environment['ProgramFiles(x86)'],
+    environment.LOCALAPPDATA ? path.join(environment.LOCALAPPDATA, 'Programs') : undefined,
+  ].filter((value): value is string => Boolean(value));
+}
+
+/** Sous-dossiers d'un répertoire dont le nom correspond au motif donné. */
+function subdirectoriesMatching(parent: string, pattern: RegExp): string[] {
+  try {
+    return fs
+      .readdirSync(parent, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && pattern.test(entry.name))
+      .map((entry) => path.join(parent, entry.name));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Emplacements d'installation habituels de Graphviz.
+ *
+ * L'installateur Windows officiel propose de ne PAS ajouter Graphviz au PATH —
+ * et c'est son option par défaut. Sans cette recherche, `dot` reste invisible
+ * alors qu'il est parfaitement installé.
+ */
+export function wellKnownDotPaths(
+  platform: NodeJS.Platform = process.platform,
+  environment: NodeJS.ProcessEnv = process.env
+): string[] {
+  if (platform === 'win32') {
+    const candidates: string[] = [];
+    for (const base of windowsProgramDirectories(environment)) {
+      candidates.push(path.join(base, 'Graphviz', 'bin', 'dot.exe'));
+      // Dossiers versionnés : « Graphviz-15.1.0 », « Graphviz 12 »…
+      for (const directory of subdirectoriesMatching(base, /^graphviz/i)) {
+        candidates.push(path.join(directory, 'bin', 'dot.exe'));
+      }
+    }
+    return candidates;
+  }
+
+  if (platform === 'darwin') {
+    return ['/opt/homebrew/bin/dot', '/usr/local/bin/dot', '/usr/bin/dot'];
+  }
+
+  return ['/usr/bin/dot', '/usr/local/bin/dot', '/snap/bin/dot'];
+}
+
+/**
+ * Emplacements d'installation habituels d'un JDK ou JRE, en complément de
+ * `JAVA_HOME` et du PATH.
+ */
+export function wellKnownJavaPaths(
+  platform: NodeJS.Platform = process.platform,
+  environment: NodeJS.ProcessEnv = process.env
+): string[] {
+  const runtimePattern = /^(jdk|jre|zulu|openjdk|corretto|graalvm|semeru|liberica)/i;
+
+  if (platform === 'win32') {
+    const vendors = [
+      'Java',
+      'Eclipse Adoptium',
+      'Eclipse Foundation',
+      'Microsoft',
+      'Zulu',
+      'Amazon Corretto',
+      'BellSoft',
+      'Semeru',
+    ];
+    const candidates: string[] = [];
+
+    for (const base of windowsProgramDirectories(environment)) {
+      for (const vendor of vendors) {
+        for (const runtime of subdirectoriesMatching(path.join(base, vendor), runtimePattern)) {
+          candidates.push(path.join(runtime, 'bin', 'java.exe'));
+        }
+      }
+    }
+    return candidates;
+  }
+
+  if (platform === 'darwin') {
+    return [
+      ...subdirectoriesMatching('/Library/Java/JavaVirtualMachines', /./).map((runtime) =>
+        path.join(runtime, 'Contents', 'Home', 'bin', 'java')
+      ),
+      '/opt/homebrew/opt/openjdk/bin/java',
+      '/usr/local/opt/openjdk/bin/java',
+    ];
+  }
+
+  return [
+    ...subdirectoriesMatching('/usr/lib/jvm', /./).map((runtime) =>
+      path.join(runtime, 'bin', 'java')
+    ),
+    '/usr/bin/java',
+  ];
+}
+
 /** Retourne le premier chemin existant, sinon `null`. */
 export function firstExisting(candidates: Array<string | null | undefined>): string | null {
   for (const candidate of candidates) {
@@ -103,7 +206,11 @@ export function findInPath(
   const extensions =
     platform === 'win32' ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT').split(';') : [''];
 
-  for (const directory of rawPath.split(separator).filter(Boolean)) {
+  for (const rawDirectory of rawPath.split(separator).filter(Boolean)) {
+    // Les entrées de PATH sont parfois entourées de guillemets sous Windows.
+    const directory = rawDirectory.trim().replace(/^"|"$/g, '');
+    if (!directory) continue;
+
     for (const extension of extensions) {
       const candidate = path.join(directory, `${executable}${extension.toLowerCase()}`);
       try {

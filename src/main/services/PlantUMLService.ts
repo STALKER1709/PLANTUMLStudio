@@ -13,6 +13,8 @@ import {
   firstExisting,
   javaHomePath,
   plantumlJarPath,
+  wellKnownDotPaths,
+  wellKnownJavaPaths,
 } from '../utils/paths';
 
 /** Formats produits directement par plantuml.jar (le PDF passe par ExportService). */
@@ -112,14 +114,22 @@ export class PlantUMLService {
         embeddedJavaPath(this.resourcesPath),
         javaHomePath(),
         findInPath('java'),
+        ...wellKnownJavaPaths(),
       ]) ?? 'java'
     );
   }
 
-  /** Binaire `dot` retenu, ou `null` si aucun Graphviz n'est disponible. */
+  /**
+   * Binaire `dot` retenu, ou `null` si aucun Graphviz n'est disponible :
+   * Graphviz embarqué → PATH → emplacements d'installation habituels.
+   */
   getDotBinaryPath(): string | null {
     if (this.explicitDotPath !== undefined) return this.explicitDotPath;
-    return firstExisting([embeddedDotPath(this.resourcesPath), findInPath('dot')]);
+    return firstExisting([
+      embeddedDotPath(this.resourcesPath),
+      findInPath('dot'),
+      ...wellKnownDotPaths(),
+    ]);
   }
 
   getJarPath(): string {

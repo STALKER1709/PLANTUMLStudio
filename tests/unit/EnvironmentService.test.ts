@@ -5,7 +5,15 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { EnvironmentService } from '../../src/main/services/EnvironmentService';
-import { embeddedJavaPath, findInPath, javaHomePath, platformKey } from '../../src/main/utils/paths';
+import {
+  embeddedJavaPath,
+  findInPath,
+  firstExisting,
+  javaHomePath,
+  platformKey,
+  wellKnownDotPaths,
+  wellKnownJavaPaths,
+} from '../../src/main/utils/paths';
 
 let resourcesPath: string;
 
@@ -96,6 +104,50 @@ describe('EnvironmentService', () => {
     } finally {
       if (previous === undefined) delete process.env.JAVA_HOME;
       else process.env.JAVA_HOME = previous;
+    }
+  });
+
+  it('trouve Graphviz installé hors du PATH sous Windows', async () => {
+    // L'installateur officiel n'ajoute rien au PATH par défaut : le binaire doit
+    // être trouvé via Program Files.
+    const programFiles = path.join(resourcesPath, 'Program Files');
+    await fsp.mkdir(path.join(programFiles, 'Graphviz', 'bin'), { recursive: true });
+    await fsp.writeFile(path.join(programFiles, 'Graphviz', 'bin', 'dot.exe'), '');
+    // Installation versionnée, également courante.
+    await fsp.mkdir(path.join(programFiles, 'Graphviz-15.1.0', 'bin'), { recursive: true });
+    await fsp.writeFile(path.join(programFiles, 'Graphviz-15.1.0', 'bin', 'dot.exe'), '');
+
+    const candidates = wellKnownDotPaths('win32', { ProgramFiles: programFiles });
+
+    expect(candidates).toContain(path.join(programFiles, 'Graphviz', 'bin', 'dot.exe'));
+    expect(candidates).toContain(path.join(programFiles, 'Graphviz-15.1.0', 'bin', 'dot.exe'));
+    expect(firstExisting(candidates)).toBeTruthy();
+  });
+
+  it('recense les JDK installés sous Program Files', async () => {
+    const programFiles = path.join(resourcesPath, 'Program Files');
+    await fsp.mkdir(path.join(programFiles, 'Eclipse Adoptium', 'jdk-21.0.5.11-hotspot', 'bin'), {
+      recursive: true,
+    });
+
+    const candidates = wellKnownJavaPaths('win32', { ProgramFiles: programFiles });
+
+    expect(candidates).toContain(
+      path.join(programFiles, 'Eclipse Adoptium', 'jdk-21.0.5.11-hotspot', 'bin', 'java.exe')
+    );
+  });
+
+  it('ignore les guillemets entourant une entrée du PATH', () => {
+    const binDirectory = path.join(resourcesPath, 'outils');
+    const previous = process.env.PATH;
+    process.env.PATH = `"${binDirectory}"${path.delimiter}${previous ?? ''}`;
+    try {
+      require('node:fs').mkdirSync(binDirectory, { recursive: true });
+      require('node:fs').writeFileSync(path.join(binDirectory, 'dot'), '');
+      expect(findInPath('dot', 'linux')).toBe(path.join(binDirectory, 'dot'));
+    } finally {
+      if (previous === undefined) delete process.env.PATH;
+      else process.env.PATH = previous;
     }
   });
 

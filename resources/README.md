@@ -21,7 +21,14 @@ JRE_ARCHIVE_FILE=/media/usb/OpenJDK21-jre_x64_windows.zip npm run resources:jre 
 ## Sans ces ressources
 
 - **Sans JRE embarqué** : l'application cherche Java dans cet ordre — `JAVA_HOME`,
-  puis le `PATH`. Java 11 ou supérieur est requis.
+  le `PATH`, puis les dossiers d'installation habituels (`Program Files\Eclipse
+  Adoptium\…`, `/usr/lib/jvm/…`, `/Library/Java/JavaVirtualMachines/…`).
+  Java 11 ou supérieur est requis.
+- **Graphviz installé mais hors du `PATH`** : c'est le comportement par défaut de
+  l'installateur Windows officiel. `dot` est donc aussi cherché dans
+  `Program Files\Graphviz\bin\`, y compris les dossiers versionnés
+  (`Graphviz-15.1.0`), ainsi que dans `/usr/bin`, `/usr/local/bin` et
+  `/opt/homebrew/bin`.
 - **Sans Graphviz** : le moteur Smetana intégré à plantuml.jar prend le relais.
   Les diagrammes de classes, d'états et de composants restent générables, avec
   une mise en page légèrement différente.

@@ -12,6 +12,8 @@ import {
   firstExisting,
   javaHomePath,
   plantumlJarPath,
+  wellKnownDotPaths,
+  wellKnownJavaPaths,
 } from '../utils/paths';
 
 const execFileAsync = promisify(execFile);
@@ -47,9 +49,13 @@ export class EnvironmentService {
     const systemJava = findInPath('java');
     // `java` sans chemin reste le dernier recours : il dépend du PATH du shell
     // qui a lancé l'application, lequel diffère parfois de celui de l'utilisateur.
-    const javaCandidates = [embeddedJava, declaredJava, systemJava, 'java'].filter(
-      (candidate): candidate is string => candidate !== null
-    );
+    const javaCandidates = [
+      embeddedJava,
+      declaredJava,
+      systemJava,
+      ...wellKnownJavaPaths(),
+      'java',
+    ].filter((candidate): candidate is string => candidate !== null);
 
     let javaPath: string | null = null;
     let javaVersion: string | null = null;
@@ -103,12 +109,27 @@ export class EnvironmentService {
       );
     }
 
-    const graphvizPath = firstExisting([embeddedDotPath(this.resourcesPath), findInPath('dot')]);
+    const graphvizPath = firstExisting([
+      embeddedDotPath(this.resourcesPath),
+      findInPath('dot'),
+      // L'installateur Windows de Graphviz n'ajoute rien au PATH par défaut.
+      ...wellKnownDotPaths(),
+    ]);
     const graphvizAvailable = graphvizPath !== null && (await this.probeGraphviz(graphvizPath));
     if (!graphvizAvailable) {
       diagnostics.push(
         "Graphviz est absent : le moteur Smetana intégré prend le relais. Les diagrammes restent générables, avec une mise en page légèrement différente."
       );
+      if (graphvizPath) {
+        // Binaire trouvé mais inutilisable : une DLL manquante, par exemple.
+        diagnostics.push(
+          `Un binaire dot existe pourtant (${graphvizPath}) mais il n'a pas répondu : installation incomplète ?`
+        );
+      } else {
+        diagnostics.push(
+          "Graphviz a été cherché dans le PATH et dans les dossiers d'installation habituels. S'il vient d'être installé, fermez complètement l'application (et le terminal qui l'a lancée) avant de la rouvrir : le PATH n'est lu qu'au démarrage du processus."
+        );
+      }
     }
 
     const ready = Boolean(javaPath) && plantumlJarAvailable;
