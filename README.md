@@ -24,7 +24,7 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 | Node.js ≥ 20.19 | développement uniquement | build Vite et Electron |
 | Java 11+ | oui, à l'exécution | recherché dans cet ordre : JRE embarqué (`resources/jre/`), `JAVA_HOME`, puis le `PATH` |
 | `plantuml.jar` | oui | `npm run resources:plantuml` |
-| Graphviz | non | sans lui, le moteur Java **Smetana** intégré prend le relais |
+| Graphviz | non, mais recommandé | sans lui, le moteur **Smetana** intégré prend le relais et ignore les tracés orthogonaux |
 
 ## Installation (développement)
 

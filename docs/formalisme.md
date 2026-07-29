@@ -53,6 +53,14 @@ skinparam style strictuml
 | `packageStyle folder` | « Il est représenté par un dossier avec son nom à l'intérieur. » |
 | `style strictuml` | distingue visuellement message synchrone, asynchrone et retour |
 | `shadowing false` | tracé net, sans ombre portée |
+| `linetype ortho` | connecteurs à angles droits, comme dans PowerAMC ou Visual Paradigm |
+
+### Tracés orthogonaux et Graphviz
+
+`linetype ortho` n'est honoré que par **Graphviz**. Sans lui, le moteur Smetana ignore la
+directive : les connecteurs restent courbes et le diagramme demeure correct, mais l'aspect
+s'éloigne des outils de modélisation classiques. C'est la seule différence visuelle notable
+entre les deux moteurs — raison pour laquelle Graphviz est recommandé sans être exigé.
 
 Les modèles recopient ces réglages en clair plutôt que d'inclure un fichier commun : chacun
 reste autonome, y compris déplacé hors de son projet. Pour mutualiser, copiez
