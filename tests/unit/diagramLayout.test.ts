@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  angleOf,
   applySimilarity,
+  boxCenter,
+  clipToShape,
   distance,
+  nearestPoint,
+  rigidTransform,
+  translateBox,
   isIdentity,
   pathEndpoints,
   similarityBetween,
@@ -120,3 +126,79 @@ describe('Réécriture des tracés SVG', () => {
     expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
   });
 });
+
+describe('Réacheminement des flèches', () => {
+  const boite = { x: 100, y: 100, width: 80, height: 40 };
+
+  it('arrête le trait sur la bordure du rectangle, pas au centre ni au coin', () => {
+    // Cible à droite : le trait doit s'arrêter au milieu du côté droit.
+    const droite = clipToShape(boite, false, { x: 500, y: 120 });
+    expect(droite.x).toBeCloseTo(180, 6);
+    expect(droite.y).toBeCloseTo(120, 6);
+
+    // Cible en dessous : au milieu du côté bas.
+    const bas = clipToShape(boite, false, { x: 140, y: 500 });
+    expect(bas.x).toBeCloseTo(140, 6);
+    expect(bas.y).toBeCloseTo(140, 6);
+  });
+
+  it('suit le contour de l’ovale pour un cas d’utilisation', () => {
+    const surOvale = clipToShape(boite, true, { x: 140 + 40, y: 120 + 20 });
+
+    // À 45°, le point est sur l'ellipse : (dx/rx)² + (dy/ry)² = 1
+    const dx = (surOvale.x - 140) / 40;
+    const dy = (surOvale.y - 120) / 20;
+    expect(dx * dx + dy * dy).toBeCloseTo(1, 6);
+    // Et il est bien à l'intérieur du rectangle englobant.
+    expect(surOvale.x).toBeLessThan(180);
+  });
+
+  it('rattache la flèche du bon côté quand l’élément passe à l’opposé', () => {
+    const cible = { x: 100, y: 120 };
+    const versLaGauche = clipToShape({ x: 300, y: 100, width: 80, height: 40 }, false, cible);
+
+    // L'élément est maintenant à droite de sa cible : le trait doit sortir par
+    // la gauche, ce qu'un simple étirement du tracé d'origine ne ferait pas.
+    expect(versLaGauche.x).toBeCloseTo(300, 6);
+  });
+
+  it('déplace et oriente une pointe de flèche sans la redimensionner', () => {
+    // Pointe horizontale de 10 unités de long, dirigée vers la droite.
+    const pointe = '100,100 110,100 105,104';
+    const avant = tailleDe(pointe);
+
+    const transform = rigidTransform({ x: 100, y: 100 }, { x: 300, y: 300 }, Math.PI / 2);
+    const apres = tailleDe(transformPoints(pointe, transform));
+
+    // Une similitude aurait changé l'échelle ; un déplacement rigide, non.
+    expect(apres.largeur).toBeCloseTo(avant.hauteur, 3);
+    expect(apres.hauteur).toBeCloseTo(avant.largeur, 3);
+  });
+
+  it('translate une boîte sans en changer les dimensions', () => {
+    const deplacee = translateBox(boite, { x: 15, y: -25 });
+
+    expect(deplacee).toEqual({ x: 115, y: 75, width: 80, height: 40 });
+    expect(boxCenter(deplacee)).toEqual({ x: 155, y: 95 });
+  });
+
+  it('mesure l’angle d’un segment', () => {
+    expect(angleOf({ x: 0, y: 0 }, { x: 1, y: 0 })).toBeCloseTo(0, 6);
+    expect(angleOf({ x: 0, y: 0 }, { x: 0, y: 1 })).toBeCloseTo(Math.PI / 2, 6);
+  });
+
+  it('trouve le point d’ancrage d’une pointe de flèche', () => {
+    const proche = nearestPoint('10,10 200,200 12,11', { x: 11, y: 11 });
+    expect(proche).toEqual({ x: 12, y: 11 });
+  });
+});
+
+function tailleDe(points: string): { largeur: number; hauteur: number } {
+  const nombres = (points.match(/-?[\d.]+/g) ?? []).map(Number);
+  const xs = nombres.filter((_, index) => index % 2 === 0);
+  const ys = nombres.filter((_, index) => index % 2 === 1);
+  return {
+    largeur: Math.max(...xs) - Math.min(...xs),
+    hauteur: Math.max(...ys) - Math.min(...ys),
+  };
+}

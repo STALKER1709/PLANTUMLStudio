@@ -118,6 +118,44 @@ test("une écriture hors des chemins désignés reste refusée", async () => {
   expect(fs.existsSync(intrus)).toBe(false);
 });
 
+test('les flèches se réajustent quand un élément change de côté', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    '@startuml\nleft to right direction\nusecase "Commander" as UC\nusecase "Payer" as P\nUC ..> P\n@enduml'
+  );
+  await expect(window.locator('.preview-stage svg .entity').first()).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await window.locator('button', { hasText: /^Éditer$/ }).click();
+
+  const lien = window.locator('g.link[data-entity-1="UC"] path');
+  const avant = await lien.getAttribute('d');
+
+  // « Commander » passe largement à droite de « Payer » : la flèche doit
+  // repartir du bord opposé, et non conserver son ancrage d'origine.
+  const boite = await window.locator('g.entity[data-entity="UC"]').boundingBox();
+  if (!boite) throw new Error('élément introuvable');
+  await window.mouse.move(boite.x + boite.width / 2, boite.y + boite.height / 2);
+  await window.mouse.down();
+  await window.mouse.move(boite.x + boite.width / 2 + 320, boite.y + boite.height / 2 + 90, {
+    steps: 10,
+  });
+  await window.mouse.up();
+
+  await expect.poll(() => lien.getAttribute('d'), { timeout: 5000 }).not.toBe(avant);
+
+  const apres = (await lien.getAttribute('d')) ?? '';
+  const [, x1, , x2] = apres.match(/M([-\d.]+),([-\d.]+) L([-\d.]+),([-\d.]+)/) ?? [];
+  expect(apres, 'le tracé est recalculé, pas étiré').toMatch(/^M[-\d.]+,[-\d.]+ L[-\d.]+,[-\d.]+$/);
+  // Le départ est désormais à droite de l'arrivée : la flèche a changé de bord.
+  expect(Number(x1)).toBeGreaterThan(Number(x2));
+});
+
 test("l'application ne déclenche aucune requête réseau", async () => {
   const requests: string[] = [];
   window.on('request', (request) => {

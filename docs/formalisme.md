@@ -135,10 +135,15 @@ Ce que cela suppose, et ce que cela implique :
   nom dans la source.
 - **La source n'est jamais modifiée.** Les déplacements vivent à côté d'elle, le temps de la
   session ; ils ne sont pas enregistrés dans le `.puml`.
-- **Un lien déplacé garde la forme de son tracé.** Il subit une similitude qui envoie ses
-  extrémités sur leurs nouvelles positions : la courbe est conservée, mais elle n'est pas
-  recalculée par le moteur de mise en page. Un déplacement important peut donc produire un
-  tracé qu'un nouveau rendu aurait routé autrement.
+- **Les flèches sont recalculées, pas déformées.** Dès qu'une de ses extrémités bouge, le lien
+  est retracé en ligne droite d'une bordure à l'autre : il s'ancre donc toujours du bon côté,
+  y compris lorsqu'un élément passe à l'opposé de sa cible. Le point d'arrivée suit le contour
+  réel — ovale pour un cas d'utilisation, rectangle sinon. Pointes de flèche et losanges sont
+  réorientés par un déplacement rigide, sans changement de taille, et l'étiquette se replace au
+  milieu du nouveau segment.
+- **Le contournement calculé par PlantUML est perdu sur les liens déplacés.** Une courbe qui
+  évitait un obstacle devient un segment droit ; les liens dont aucune extrémité n'a bougé
+  gardent en revanche exactement le tracé d'origine.
 - **L'export suit ce que vous voyez.** Dès qu'un déplacement existe, « Exporter » écrit le
   rendu affiché — SVG et PDF depuis le texte SVG, PNG rastérisé par l'application — au lieu de
   régénérer depuis la source.

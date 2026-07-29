@@ -166,8 +166,12 @@ const ORIGINAL_Y = 'data-puml-y';
 export interface EntityHandle {
   id: string;
   group: SVGGElement;
-  /** Centre de la géométrie d'origine, invariant sous nos transformations. */
+  /** Rectangle englobant d'origine, invariant sous nos transformations. */
+  box: Box;
+  /** Centre de la géométrie d'origine. */
   center: Point;
+  /** `true` pour un cas d'utilisation : une flèche s'y arrête sur l'ovale. */
+  ellipse: boolean;
 }
 
 /** Recense les éléments déplaçables d'un diagramme rendu. */
@@ -181,11 +185,16 @@ export function indexEntities(root: SVGSVGElement): Map<string, EntityHandle> {
     // `getBBox` ignore la transformation propre du groupe : le centre reste
     // donc celui de la mise en page calculée par PlantUML, même après un
     // déplacement.
-    const box = group.getBBox();
+    const rect = group.getBBox();
+    const box: Box = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
     entities.set(id, {
       id,
       group,
-      center: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+      box,
+      center: boxCenter(box),
+      // Un cas d'utilisation est dessiné par une ellipse : s'arrêter au
+      // rectangle englobant laisserait un écart visible dans les angles.
+      ellipse: group.querySelector('ellipse') !== null,
     });
   });
 
@@ -284,63 +293,157 @@ function reflowLink(
   const from = entities.get(link.getAttribute('data-entity-1') ?? '');
   const to = entities.get(link.getAttribute('data-entity-2') ?? '');
 
-  const path = link.querySelector<SVGPathElement>('path');
-  const original = path ? readOriginal(path, ORIGINAL_PATH, 'd') : null;
-  const endpoints = original ? pathEndpoints(original) : null;
+  const paths = Array.from(link.querySelectorAll<SVGPathElement>('path'));
+  const principal = paths[0] ?? null;
+  const originalPath = principal ? readOriginal(principal, ORIGINAL_PATH, 'd') : null;
+  const originalEndpoints = originalPath ? pathEndpoints(originalPath) : null;
 
-  let transform = identitySimilarity();
+  const deplace = (entity: EntityHandle | undefined) =>
+    entity !== undefined && offsets[entity.id] !== undefined;
 
-  if (from && to && endpoints) {
-    // Le tracé peut partir de l'un ou l'autre élément : on rattache chaque
-    // extrémité au plus proche.
-    const departVersFrom =
-      distance(endpoints.start, from.center) <= distance(endpoints.start, to.center);
-    const debut = departVersFrom ? from : to;
-    const fin = departVersFrom ? to : from;
+  // Rien n'a bougé aux extrémités : la mise en page calculée par PlantUML est
+  // meilleure que tout ce qu'on pourrait recalculer, on la restitue.
+  if (!from || !to || !originalEndpoints || (!deplace(from) && !deplace(to))) {
+    restoreOriginalGeometry(link);
+    return;
+  }
 
-    transform = similarityBetween(
-      endpoints.start,
-      endpoints.end,
-      addOffset(endpoints.start, offsets[debut.id]),
-      addOffset(endpoints.end, offsets[fin.id])
+  if (from.id === to.id) {
+    // Lien réflexif : il suit son élément sans changer de forme.
+    translateLinkGeometry(link, offsets[from.id] ?? { x: 0, y: 0 });
+    return;
+  }
+
+  const boiteDepart = translateBox(from.box, offsets[from.id]);
+  const boiteArrivee = translateBox(to.box, offsets[to.id]);
+  const centreDepart = boxCenter(boiteDepart);
+  const centreArrivee = boxCenter(boiteArrivee);
+
+  // Le tracé rejoint les deux bordures en ligne droite : c'est le chemin le
+  // plus court, et surtout celui qui reste correct quel que soit le côté vers
+  // lequel l'élément a été déplacé.
+  const depart = clipToShape(boiteDepart, from.ellipse, centreArrivee);
+  const arrivee = clipToShape(boiteArrivee, to.ellipse, centreDepart);
+
+  // L'extrémité du tracé d'origine la plus proche du départ donne le sens :
+  // c'est elle qui porte, ou non, la pointe de flèche.
+  const traceVaDeDepart =
+    distance(originalEndpoints.start, from.center) <=
+    distance(originalEndpoints.start, to.center);
+  const nouveauDebut = traceVaDeDepart ? depart : arrivee;
+  const nouvelleFin = traceVaDeDepart ? arrivee : depart;
+
+  if (principal) {
+    principal.setAttribute(
+      'd',
+      `M${round(nouveauDebut.x)},${round(nouveauDebut.y)} L${round(nouvelleFin.x)},${round(nouvelleFin.y)}`
     );
   }
 
-  link.querySelectorAll<SVGPathElement>('path').forEach((element) => {
+  // Les tracés secondaires (double trait, décorations) suivent rigidement.
+  const rotation =
+    angleOf(nouveauDebut, nouvelleFin) -
+    angleOf(originalEndpoints.start, originalEndpoints.end);
+
+  paths.slice(1).forEach((element) => {
     const source = readOriginal(element, ORIGINAL_PATH, 'd');
-    if (source) element.setAttribute('d', transformPathData(source, transform));
+    if (!source) return;
+    const extremites = pathEndpoints(source);
+    if (!extremites) return;
+    const cible = distance(extremites.start, originalEndpoints.start) <=
+      distance(extremites.start, originalEndpoints.end)
+      ? nouveauDebut
+      : nouvelleFin;
+    element.setAttribute(
+      'd',
+      transformPathData(source, rigidTransform(extremites.start, cible, rotation))
+    );
   });
 
-  link.querySelectorAll<SVGPolygonElement | SVGPolylineElement>('polygon, polyline').forEach(
-    (element) => {
+  // Pointes de flèche et losanges : déplacés et réorientés, jamais redimensionnés.
+  link
+    .querySelectorAll<SVGPolygonElement | SVGPolylineElement>('polygon, polyline')
+    .forEach((element) => {
       const source = readOriginal(element, ORIGINAL_POINTS, 'points');
-      if (source) element.setAttribute('points', transformPoints(source, transform));
-    }
-  );
+      if (!source) return;
 
-  // Les étiquettes sont translatées sans être tournées : un texte incliné
-  // serait illisible alors que la rotation n'apporte rien ici.
-  const deplacement = etiquetteDeplacement(transform, endpoints);
+      const versFin =
+        (nearestPoint(source, originalEndpoints.end) &&
+          distance(nearestPoint(source, originalEndpoints.end) as Point, originalEndpoints.end) <=
+            distance(
+              nearestPoint(source, originalEndpoints.start) as Point,
+              originalEndpoints.start
+            )) ??
+        true;
+
+      const ancre = versFin ? originalEndpoints.end : originalEndpoints.start;
+      const cible = versFin ? nouvelleFin : nouveauDebut;
+      const pivot = nearestPoint(source, ancre) ?? ancre;
+      const pivotCible = {
+        x: cible.x + (pivot.x - ancre.x),
+        y: cible.y + (pivot.y - ancre.y),
+      };
+
+      element.setAttribute(
+        'points',
+        transformPoints(source, rigidTransform(pivot, pivotCible, rotation))
+      );
+    });
+
+  // L'étiquette se replace au milieu du nouveau trait, sans rotation.
+  const milieuOrigine = {
+    x: (originalEndpoints.start.x + originalEndpoints.end.x) / 2,
+    y: (originalEndpoints.start.y + originalEndpoints.end.y) / 2,
+  };
+  const milieuCible = {
+    x: (nouveauDebut.x + nouvelleFin.x) / 2,
+    y: (nouveauDebut.y + nouvelleFin.y) / 2,
+  };
+  translateTexts(link, {
+    x: milieuCible.x - milieuOrigine.x,
+    y: milieuCible.y - milieuOrigine.y,
+  });
+}
+
+/** Restitue la géométrie calculée par PlantUML. */
+function restoreOriginalGeometry(link: SVGGElement): void {
+  link.querySelectorAll<SVGPathElement>('path').forEach((element) => {
+    const source = readOriginal(element, ORIGINAL_PATH, 'd');
+    if (source) element.setAttribute('d', source);
+  });
+  link
+    .querySelectorAll<SVGPolygonElement | SVGPolylineElement>('polygon, polyline')
+    .forEach((element) => {
+      const source = readOriginal(element, ORIGINAL_POINTS, 'points');
+      if (source) element.setAttribute('points', source);
+    });
+  translateTexts(link, { x: 0, y: 0 });
+}
+
+/** Déplace tout le lien en bloc, sans le déformer. */
+function translateLinkGeometry(link: SVGGElement, offset: Point): void {
+  const translation = rigidTransform({ x: 0, y: 0 }, offset, 0);
+
+  link.querySelectorAll<SVGPathElement>('path').forEach((element) => {
+    const source = readOriginal(element, ORIGINAL_PATH, 'd');
+    if (source) element.setAttribute('d', transformPathData(source, translation));
+  });
+  link
+    .querySelectorAll<SVGPolygonElement | SVGPolylineElement>('polygon, polyline')
+    .forEach((element) => {
+      const source = readOriginal(element, ORIGINAL_POINTS, 'points');
+      if (source) element.setAttribute('points', transformPoints(source, translation));
+    });
+  translateTexts(link, offset);
+}
+
+function translateTexts(link: SVGGElement, deplacement: Point): void {
   link.querySelectorAll<SVGTextElement>('text').forEach((element) => {
     const x = readOriginal(element, ORIGINAL_X, 'x');
     const y = readOriginal(element, ORIGINAL_Y, 'y');
     if (x !== null) element.setAttribute('x', round(Number(x) + deplacement.x));
     if (y !== null) element.setAttribute('y', round(Number(y) + deplacement.y));
   });
-}
-
-function etiquetteDeplacement(
-  transform: Similarity,
-  endpoints: { start: Point; end: Point } | null
-): Point {
-  if (!endpoints) return { x: 0, y: 0 };
-
-  const debut = applySimilarity(transform, endpoints.start);
-  const fin = applySimilarity(transform, endpoints.end);
-  return {
-    x: (debut.x - endpoints.start.x + (fin.x - endpoints.end.x)) / 2,
-    y: (debut.y - endpoints.start.y + (fin.y - endpoints.end.y)) / 2,
-  };
 }
 
 /** Lit la géométrie d'origine, en la mémorisant au premier passage. */
@@ -353,4 +456,85 @@ function readOriginal(element: Element, storageAttribute: string, attribute: str
 
   element.setAttribute(storageAttribute, current);
   return current;
+}
+
+/** Rectangle englobant d'un élément, dans le repère du diagramme. */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export function boxCenter(box: Box): Point {
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+export function translateBox(box: Box, offset: Point | undefined): Box {
+  if (!offset) return box;
+  return { ...box, x: box.x + offset.x, y: box.y + offset.y };
+}
+
+/**
+ * Point où le segment partant du centre de la forme vers `vers` en franchit la
+ * bordure. C'est là que doit s'arrêter une flèche : ni au centre, ni au coin du
+ * rectangle englobant.
+ */
+export function clipToShape(box: Box, ellipse: boolean, vers: Point): Point {
+  const centre = boxCenter(box);
+  const dx = vers.x - centre.x;
+  const dy = vers.y - centre.y;
+
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return centre;
+
+  const rx = box.width / 2;
+  const ry = box.height / 2;
+
+  // Ellipse : le rapport qui ramène le point sur le contour.
+  // Rectangle : le plus contraignant des deux axes.
+  const facteur = ellipse
+    ? 1 / Math.hypot(dx / (rx || 1), dy / (ry || 1))
+    : Math.min(rx / Math.abs(dx || 1e-9), ry / Math.abs(dy || 1e-9));
+
+  return { x: centre.x + dx * facteur, y: centre.y + dy * facteur };
+}
+
+export function angleOf(from: Point, to: Point): number {
+  return Math.atan2(to.y - from.y, to.x - from.x);
+}
+
+/**
+ * Déplacement rigide : rotation d'un angle donné autour de `pivotSource`, puis
+ * translation de ce pivot vers `pivotCible`. Contrairement à une similitude,
+ * il ne change pas les dimensions — une pointe de flèche garde sa taille.
+ */
+export function rigidTransform(pivotSource: Point, pivotCible: Point, rotation: number): Similarity {
+  const a = Math.cos(rotation);
+  const b = Math.sin(rotation);
+  return {
+    a,
+    b,
+    tx: pivotCible.x - (a * pivotSource.x - b * pivotSource.y),
+    ty: pivotCible.y - (b * pivotSource.x + a * pivotSource.y),
+  };
+}
+
+/** Point d'une liste `points` le plus proche d'une référence. */
+export function nearestPoint(points: string, reference: Point): Point | null {
+  const numbers = points.match(NUMBER);
+  if (!numbers || numbers.length < 2) return null;
+
+  let best: Point | null = null;
+  let bestDistance = Infinity;
+
+  for (let index = 0; index + 1 < numbers.length; index += 2) {
+    const candidate = { x: Number(numbers[index]), y: Number(numbers[index + 1]) };
+    const écart = distance(candidate, reference);
+    if (écart < bestDistance) {
+      bestDistance = écart;
+      best = candidate;
+    }
+  }
+
+  return best;
 }
