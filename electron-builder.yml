@@ -48,6 +48,8 @@ mac:
   hardenedRuntime: true
 
 linux:
+  # Champ obligatoire pour les paquets .deb et .rpm.
+  maintainer: STALKER1709 <144211603+STALKER1709@users.noreply.github.com>
   target:
     - deb
     - rpm

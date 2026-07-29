@@ -51,6 +51,21 @@ npm run package:mac      # image disque (.dmg)
 npm run package:linux    # paquets .deb, .rpm et AppImage
 ```
 
+## Poids des artefacts
+
+Mesuré sur un build réel (Linux, `.deb`, sans JRE embarqué) :
+
+| Élément | Taille |
+| --- | --- |
+| Paquet `.deb` complet | 120 Mo |
+| dont `plantuml.jar` | 21,5 Mo |
+| `app.asar` (code applicatif) | 18 Mo |
+| JRE Temurin embarqué, si ajouté | ≈ 35 Mo compressés |
+
+Les paquets utilisés uniquement par le renderer (Monaco, React, Zustand) sont en
+`devDependencies` : Vite les intègre déjà à `dist/renderer`, les conserver en
+dépendances d'exécution ajoutait **107 Mo** de code mort dans l'archive.
+
 ## Architecture
 
 ```
