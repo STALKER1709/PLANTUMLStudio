@@ -9,6 +9,10 @@
  *   node scripts/download-jre.js            # plateforme courante
  *   node scripts/download-jre.js win mac linux
  *   JRE_VERSION=21 node scripts/download-jre.js
+ *   JRE_ARCHIVE_FILE=/chemin/OpenJDK21-jre.zip node scripts/download-jre.js win
+ *
+ * `JRE_ARCHIVE_FILE` permet une installation entièrement hors ligne à partir
+ * d'une archive Temurin déjà récupérée (clé USB, partage local).
  *
  * Licence : Temurin est distribué sous GPLv2 with Classpath Exception.
  * Vérifiez les conditions de redistribution avant toute diffusion commerciale.
@@ -109,14 +113,25 @@ async function installFor(platform) {
 
   const { archive } = PLATFORMS[platform];
   const target = path.join(RESOURCES, 'jre', platform);
-  const archivePath = path.join(os.tmpdir(), `temurin-${platform}.${archive}`);
+  const localArchive = process.env.JRE_ARCHIVE_FILE;
+  const archivePath = localArchive ?? path.join(os.tmpdir(), `temurin-${platform}.${archive}`);
+  const archiveType = localArchive
+    ? localArchive.toLowerCase().endsWith('.zip')
+      ? 'zip'
+      : 'tar.gz'
+    : archive;
 
-  console.log(`Téléchargement du JRE ${JRE_VERSION} pour ${platform}…`);
-  await download(apiUrl(platform), archivePath);
+  if (localArchive) {
+    console.log(`Archive locale utilisée : ${localArchive}`);
+  } else {
+    console.log(`Téléchargement du JRE ${JRE_VERSION} pour ${platform}…`);
+    await download(apiUrl(platform), archivePath);
+  }
 
   console.log(`Extraction vers ${target}…`);
-  extract(archivePath, target, archive);
-  fs.rmSync(archivePath, { force: true });
+  extract(archivePath, target, archiveType);
+  // Une archive fournie par l'utilisateur ne nous appartient pas : on la garde.
+  if (!localArchive) fs.rmSync(archivePath, { force: true });
 
   const javaBinary =
     platform === 'win'

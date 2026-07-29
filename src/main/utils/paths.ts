@@ -47,6 +47,23 @@ export function embeddedJavaPath(
   return path.join(...segments);
 }
 
+/**
+ * Chemin du binaire `java` désigné par `JAVA_HOME`, si la variable est définie.
+ *
+ * Sous Windows en particulier, Java est très souvent installé sans être ajouté
+ * au PATH : `JAVA_HOME` est alors la seule piste exploitable.
+ */
+export function javaHomePath(
+  platform: NodeJS.Platform = process.platform,
+  environment: NodeJS.ProcessEnv = process.env
+): string | null {
+  const javaHome = environment.JAVA_HOME?.trim();
+  if (!javaHome) return null;
+
+  const binary = platform === 'win32' ? 'java.exe' : 'java';
+  return path.join(javaHome.replace(/["']/g, ''), 'bin', binary);
+}
+
 /** Chemin du binaire `dot` de Graphviz embarqué (existant ou non). */
 export function embeddedDotPath(
   resourcesPath: string,

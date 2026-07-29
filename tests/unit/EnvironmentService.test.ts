@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { EnvironmentService } from '../../src/main/services/EnvironmentService';
-import { embeddedJavaPath, findInPath, platformKey } from '../../src/main/utils/paths';
+import { embeddedJavaPath, findInPath, javaHomePath, platformKey } from '../../src/main/utils/paths';
 
 let resourcesPath: string;
 
@@ -59,6 +59,44 @@ describe('EnvironmentService', () => {
     const version = await service.probeJavaVersion(path.join(resourcesPath, 'java-absent'));
 
     expect(version).toBeNull();
+  });
+
+  it('déduit le binaire java de JAVA_HOME', () => {
+    // Cas fréquent sous Windows : Java installé, mais absent du PATH.
+    expect(javaHomePath('win32', { JAVA_HOME: 'C:\\Program Files\\Java\\jdk-21' })).toBe(
+      path.join('C:\\Program Files\\Java\\jdk-21', 'bin', 'java.exe')
+    );
+    expect(javaHomePath('linux', { JAVA_HOME: '/opt/java' })).toBe(
+      path.join('/opt/java', 'bin', 'java')
+    );
+    // Les guillemets sont courants dans une variable saisie à la main.
+    expect(javaHomePath('win32', { JAVA_HOME: '"C:\\Java\\jdk"' })).toBe(
+      path.join('C:\\Java\\jdk', 'bin', 'java.exe')
+    );
+    expect(javaHomePath('linux', {})).toBeNull();
+    expect(javaHomePath('linux', { JAVA_HOME: '   ' })).toBeNull();
+  });
+
+  it('retient le java de JAVA_HOME quand le PATH n’en contient aucun', async () => {
+    // Faux JRE : un script exécutable qui répond comme `java -version`.
+    const javaHome = path.join(resourcesPath, 'faux-jdk');
+    await fsp.mkdir(path.join(javaHome, 'bin'), { recursive: true });
+    const binary = path.join(javaHome, 'bin', 'java');
+    await fsp.writeFile(binary, '#!/bin/sh\necho \'openjdk version "21.0.1"\' >&2\n');
+    await fsp.chmod(binary, 0o755);
+
+    const previous = process.env.JAVA_HOME;
+    process.env.JAVA_HOME = javaHome;
+    try {
+      const status = await new EnvironmentService({ resourcesPath }).checkEnvironment();
+      expect(status.javaAvailable).toBe(true);
+      expect(status.javaPath).toBe(binary);
+      expect(status.javaVersion).toBe('21.0.1');
+      expect(status.javaIsEmbedded).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.JAVA_HOME;
+      else process.env.JAVA_HOME = previous;
+    }
   });
 
   it('cherche le JRE embarqué à l’emplacement propre à la plateforme', () => {

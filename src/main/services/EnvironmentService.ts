@@ -10,6 +10,7 @@ import {
   embeddedJavaPath,
   findInPath,
   firstExisting,
+  javaHomePath,
   plantumlJarPath,
 } from '../utils/paths';
 
@@ -42,8 +43,11 @@ export class EnvironmentService {
     const diagnostics: string[] = [];
 
     const embeddedJava = embeddedJavaPath(this.resourcesPath);
+    const declaredJava = javaHomePath();
     const systemJava = findInPath('java');
-    const javaCandidates = [embeddedJava, systemJava, 'java'].filter(
+    // `java` sans chemin reste le dernier recours : il dépend du PATH du shell
+    // qui a lancé l'application, lequel diffère parfois de celui de l'utilisateur.
+    const javaCandidates = [embeddedJava, declaredJava, systemJava, 'java'].filter(
       (candidate): candidate is string => candidate !== null
     );
 
@@ -72,8 +76,16 @@ export class EnvironmentService {
 
     if (!javaPath) {
       diagnostics.push(
-        "Java est introuvable. Exécutez « npm run resources:jre » pour embarquer un JRE, ou installez Java 11 ou supérieur."
+        "Java est introuvable : ni JRE embarqué (resources/jre/), ni JAVA_HOME, ni « java » dans le PATH."
       );
+      diagnostics.push(
+        "Deux solutions : exécuter « npm run resources:jre » pour embarquer un JRE dans l'application, ou installer Java 11 ou supérieur (Eclipse Temurin) puis rouvrir l'application."
+      );
+      if (process.env.JAVA_HOME) {
+        diagnostics.push(
+          `JAVA_HOME est défini (${process.env.JAVA_HOME}) mais aucun binaire java exploitable ne s'y trouve : vérifiez que le chemin pointe bien sur la racine d'un JDK ou JRE.`
+        );
+      }
     } else if (javaIsEmbedded) {
       logger.info(`JRE embarqué utilisé : ${javaPath} (${javaVersion})`);
     } else {

@@ -6,7 +6,14 @@ import path from 'node:path';
 
 import type { DiagramFormat, PlantUMLError, RenderResult } from '../../shared/types';
 import { logger } from '../utils/logger';
-import { embeddedDotPath, embeddedJavaPath, findInPath, firstExisting, plantumlJarPath } from '../utils/paths';
+import {
+  embeddedDotPath,
+  embeddedJavaPath,
+  findInPath,
+  firstExisting,
+  javaHomePath,
+  plantumlJarPath,
+} from '../utils/paths';
 
 /** Formats produits directement par plantuml.jar (le PDF passe par ExportService). */
 export type EngineFormat = Extract<DiagramFormat, 'svg' | 'png'>;
@@ -94,11 +101,18 @@ export class PlantUMLService {
     this.includePath = directory;
   }
 
-  /** Binaire java retenu : override → JRE embarqué → java du PATH → `java`. */
+  /**
+   * Binaire java retenu, par ordre de préférence :
+   * override → JRE embarqué → `JAVA_HOME` → PATH → `java` (dernier recours).
+   */
   getJavaPath(): string {
     if (this.explicitJavaPath) return this.explicitJavaPath;
     return (
-      firstExisting([embeddedJavaPath(this.resourcesPath), findInPath('java')]) ?? 'java'
+      firstExisting([
+        embeddedJavaPath(this.resourcesPath),
+        javaHomePath(),
+        findInPath('java'),
+      ]) ?? 'java'
     );
   }
 

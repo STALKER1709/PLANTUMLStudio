@@ -9,9 +9,19 @@ Ils ne sont **pas** versionnés (voir `.gitignore`) : récupérez-les avant de p
 | `jre/<win\|mac\|linux>/` | JRE Temurin embarqué (optionnel) | `npm run resources:jre -- win mac linux` |
 | `graphviz/<win\|mac\|linux>/bin/dot` | Mise en page des diagrammes | binaires officiels Graphviz, copiés manuellement |
 
+## Installation sans accès réseau
+
+Les deux scripts acceptent une source locale, pour une machine coupée d'Internet :
+
+```bash
+PLANTUML_JAR_FILE=/media/usb/plantuml.jar npm run resources:plantuml
+JRE_ARCHIVE_FILE=/media/usb/OpenJDK21-jre_x64_windows.zip npm run resources:jre -- win
+```
+
 ## Sans ces ressources
 
-- **Sans JRE embarqué** : l'application utilise le `java` du système (Java 11 ou supérieur).
+- **Sans JRE embarqué** : l'application cherche Java dans cet ordre — `JAVA_HOME`,
+  puis le `PATH`. Java 11 ou supérieur est requis.
 - **Sans Graphviz** : le moteur Smetana intégré à plantuml.jar prend le relais.
   Les diagrammes de classes, d'états et de composants restent générables, avec
   une mise en page légèrement différente.
