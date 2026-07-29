@@ -6,6 +6,7 @@
   "toolbar.createProject": "Nouveau projet",
   "toolbar.newFile": "Nouveau diagramme",
   "toolbar.save": "Enregistrer",
+  "toolbar.saveAs": "Enregistrer sous…",
   "toolbar.export": "Exporter",
   "toolbar.exportProject": "Exporter le projet (ZIP)",
   "toolbar.format": "Format",

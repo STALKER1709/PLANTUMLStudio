@@ -19,6 +19,7 @@ const CHANNELS = {
   LIST_FILES: 'file:list',
   READ_FILE: 'file:read',
   SAVE_FILE: 'file:save',
+  SAVE_FILE_AS: 'file:saveAs',
   CREATE_FILE: 'file:create',
   DELETE_FILE: 'file:delete',
   RENAME_FILE: 'file:rename',
@@ -41,6 +42,8 @@ const api: ElectronAPI = {
   readFile: (filePath: string) => ipcRenderer.invoke(CHANNELS.READ_FILE, filePath),
   saveFile: (filePath: string, content: string) =>
     ipcRenderer.invoke(CHANNELS.SAVE_FILE, filePath, content),
+  saveFileAs: (content: string, suggestedName?: string) =>
+    ipcRenderer.invoke(CHANNELS.SAVE_FILE_AS, content, suggestedName),
   createFile: (dirPath: string, fileName: string, content?: string) =>
     ipcRenderer.invoke(CHANNELS.CREATE_FILE, dirPath, fileName, content ?? ''),
   deleteFile: (filePath: string) => ipcRenderer.invoke(CHANNELS.DELETE_FILE, filePath),

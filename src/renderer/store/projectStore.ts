@@ -16,6 +16,7 @@ interface ProjectState {
   refreshTree(): Promise<void>;
   openFile(filePath: string): Promise<void>;
   saveCurrentFile(): Promise<void>;
+  saveCurrentFileAs(): Promise<void>;
   createFile(directory: string, fileName: string): Promise<void>;
   renameFile(filePath: string, newName: string): Promise<void>;
   deleteFile(filePath: string): Promise<void>;
@@ -98,9 +99,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   saveCurrentFile: async () => {
     const { filePath, content } = useEditorStore.getState();
+    // Un brouillon n'a pas encore de destination : on la demande.
     if (!filePath) {
-      // Un brouillon doit d'abord recevoir un nom via l'arborescence.
-      notifyError(t('toolbar.noFile'));
+      await get().saveCurrentFileAs();
       return;
     }
 
@@ -112,6 +113,25 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
     useEditorStore.getState().markSaved(filePath);
     useToastStore.getState().push('success', t('toast.saved', { name: fileName(filePath) }));
+  },
+
+  saveCurrentFileAs: async () => {
+    const { filePath, content } = useEditorStore.getState();
+    const suggested = filePath ? fileName(filePath) : 'diagramme.puml';
+
+    const result = await window.electronAPI.saveFileAs(content, suggested);
+    if (!result.ok || !result.data) {
+      // L'annulation utilisateur n'est pas une erreur.
+      if (result.error && !/annul/i.test(result.error)) notifyError(result.error);
+      return;
+    }
+
+    // Le fichier devient le document courant : les enregistrements suivants
+    // vont droit à cette destination.
+    useEditorStore.getState().markSaved(result.data);
+    // S'il a été déposé dans le projet ouvert, l'arborescence doit le montrer.
+    await get().refreshTree();
+    useToastStore.getState().push('success', t('toast.saved', { name: fileName(result.data) }));
   },
 
   createFile: async (directory, name) => {

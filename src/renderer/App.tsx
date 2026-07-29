@@ -29,6 +29,7 @@ export function App() {
   const consumeRevealLine = useEditorStore((state) => state.consumeRevealLine);
 
   const saveCurrentFile = useProjectStore((state) => state.saveCurrentFile);
+  const saveCurrentFileAs = useProjectStore((state) => state.saveCurrentFileAs);
 
   const environment = useIpc(() => window.electronAPI.checkEnvironment(), []);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -42,13 +43,14 @@ export function App() {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void saveCurrentFile();
+        // Maj : choisir une nouvelle destination plutôt qu'écraser la courante.
+        void (event.shiftKey ? saveCurrentFileAs() : saveCurrentFile());
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [saveCurrentFile]);
+  }, [saveCurrentFile, saveCurrentFileAs]);
 
   const handleSave = useCallback(() => void saveCurrentFile(), [saveCurrentFile]);
 

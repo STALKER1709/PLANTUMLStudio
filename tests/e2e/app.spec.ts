@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test';
@@ -61,6 +62,60 @@ test('une syntaxe invalide affiche le panneau d’erreurs en français', async (
 
   await expect(window.locator('.error-panel')).toBeVisible({ timeout: 30_000 });
   await expect(window.getByText('Erreur de génération')).toBeVisible();
+});
+
+test('un brouillon édité peut être enregistré via « Enregistrer sous »', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : seul l’écran de diagnostic s’affiche.');
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'puml-e2e-'));
+  const chosenPath = path.join(directory, 'mon-diagramme');
+
+  // La boîte de dialogue système ne s'automatise pas : on lui substitue une
+  // réponse, ce qui laisse tout le reste du chemin s'exécuter réellement.
+  await app.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, chosenPath);
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type('@startuml\ntitle Version 1\n@enduml');
+
+  await window.locator('button', { hasText: /^Enregistrer$/ }).click();
+  const savedPath = `${chosenPath}.puml`;
+  await expect
+    .poll(() => fs.existsSync(savedPath), { timeout: 10_000 })
+    .toBe(true);
+  expect(fs.readFileSync(savedPath, 'utf-8')).toContain('Version 1');
+
+  // Le fichier est adopté : le raccourci suivant y écrit directement, alors
+  // même qu'aucun projet n'est ouvert.
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type('@startuml\ntitle Version 2\n@enduml');
+  await window.keyboard.press('Control+s');
+  await expect
+    .poll(() => fs.readFileSync(savedPath, 'utf-8').includes('Version 2'), { timeout: 10_000 })
+    .toBe(true);
+
+  fs.rmSync(directory, { recursive: true, force: true });
+});
+
+test("une écriture hors des chemins désignés reste refusée", async () => {
+  const intrus = path.join(os.tmpdir(), `puml-intrus-${Date.now()}.puml`);
+
+  const result = await window.evaluate(
+    (target) =>
+      (
+        globalThis as unknown as {
+          electronAPI: { saveFile(path: string, content: string): Promise<{ success: boolean }> };
+        }
+      ).electronAPI.saveFile(target, 'contenu'),
+    intrus
+  );
+
+  expect(result.success).toBe(false);
+  expect(fs.existsSync(intrus)).toBe(false);
 });
 
 test("l'application ne déclenche aucune requête réseau", async () => {

@@ -15,6 +15,7 @@ export function Toolbar() {
   const openProject = useProjectStore((state) => state.openProject);
   const createProject = useProjectStore((state) => state.createProject);
   const saveCurrentFile = useProjectStore((state) => state.saveCurrentFile);
+  const saveCurrentFileAs = useProjectStore((state) => state.saveCurrentFileAs);
 
   const filePath = useEditorStore((state) => state.filePath);
   const content = useEditorStore((state) => state.content);
@@ -73,14 +74,24 @@ export function Toolbar() {
       </span>
 
       <span className="group">
+        {/* Un brouillon est enregistrable : « Enregistrer » demande alors
+            sa destination, au lieu d'être inaccessible. */}
         <button
           type="button"
           className="primary"
-          disabled={!filePath || !isDirty}
+          disabled={content.trim() === '' || (Boolean(filePath) && !isDirty)}
           onClick={() => void saveCurrentFile()}
           title="Ctrl+S"
         >
           {t('toolbar.save')}
+        </button>
+        <button
+          type="button"
+          disabled={content.trim() === ''}
+          onClick={() => void saveCurrentFileAs()}
+          title="Ctrl+Maj+S"
+        >
+          {t('toolbar.saveAs')}
         </button>
       </span>
 

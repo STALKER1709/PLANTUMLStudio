@@ -11,6 +11,8 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Prévisualisation SVG en temps réel (rendu débouncé, zoom et déplacement à la souris)
 - Panneau d'erreurs **en français**, avec numéro de ligne cliquable qui positionne le curseur
 - Arborescence de projet : création, renommage, suppression de fichiers `.puml`
+- Édition libre avant enregistrement : un diagramme se compose dans l'éditeur, puis
+  **« Enregistrer sous… »** (Ctrl+Maj+S) demande sa destination — aucun projet requis
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))

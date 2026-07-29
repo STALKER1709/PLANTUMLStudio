@@ -42,6 +42,15 @@ const FORMAT_FILTERS: Record<DiagramFormat, Electron.FileFilter> = {
 /** Projet actuellement ouvert : sert de racine autorisée aux opérations disque. */
 let currentProject: Project | null = null;
 
+/**
+ * Fichiers désignés par l'utilisateur dans une boîte de dialogue système.
+ * Ils restent accessibles même hors du projet ouvert : c'est l'utilisateur
+ * lui-même qui a choisi la destination, exactement comme à l'ouverture d'un
+ * projet. Sans cette liste, un diagramme enregistré hors projet ne pourrait
+ * plus être réenregistré ensuite.
+ */
+const userDesignatedFiles = new Set<string>();
+
 /** Les boîtes de dialogue sont modales quand une fenêtre est disponible. */
 function showOpenDialog(
   window: BrowserWindow | null,
@@ -77,6 +86,8 @@ function fail<T>(error: unknown): IpcResult<T> {
  * de dialogue système (choisie par l'utilisateur) sont possibles.
  */
 function assertInsideProject(files: FileService, target: string): void {
+  if (userDesignatedFiles.has(path.resolve(target))) return;
+
   if (!currentProject) {
     throw new Error("Aucun projet ouvert : ouvrez un dossier avant de modifier des fichiers.");
   }
@@ -217,6 +228,43 @@ export function registerIpcHandlers(context: IpcContext): void {
       } catch (error) {
         logger.error(`Échec de l'enregistrement de ${filePath}`, error);
         return { success: false, error: toMessage(error) };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SAVE_FILE_AS,
+    async (
+      _event,
+      content: string,
+      suggestedName = 'diagramme.puml'
+    ): Promise<IpcResult<string>> => {
+      try {
+        const window = context.getMainWindow();
+        const selection = await showSaveDialog(window, {
+          title: 'Enregistrer le diagramme',
+          defaultPath: currentProject
+            ? path.join(currentProject.rootPath, suggestedName)
+            : suggestedName,
+          filters: [
+            { name: 'Source PlantUML', extensions: ['puml', 'plantuml', 'pu', 'iuml', 'wsd'] },
+          ],
+        });
+
+        if (selection.canceled || !selection.filePath) {
+          return { ok: false, error: 'Enregistrement annulé.' };
+        }
+
+        // La destination a été désignée par l'utilisateur dans une boîte de
+        // dialogue système : elle peut légitimement sortir du projet ouvert,
+        // au même titre que l'ouverture d'un projet.
+        const targetPath = files.ensurePumlExtension(selection.filePath);
+        await files.writePumlFile(targetPath, content);
+        userDesignatedFiles.add(path.resolve(targetPath));
+        logger.info(`Diagramme enregistré sous ${targetPath}`);
+        return ok(targetPath);
+      } catch (error) {
+        return fail(error);
       }
     }
   );

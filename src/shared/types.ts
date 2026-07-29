@@ -144,6 +144,8 @@ export interface ElectronAPI {
   listProjectFiles(projectPath: string): Promise<IpcResult<FileNode>>;
   readFile(filePath: string): Promise<IpcResult<string>>;
   saveFile(filePath: string, content: string): Promise<SaveFileResult>;
+  /** Demande une destination à l'utilisateur, puis écrit le contenu. */
+  saveFileAs(content: string, suggestedName?: string): Promise<IpcResult<string>>;
   createFile(dirPath: string, fileName: string, content?: string): Promise<IpcResult<string>>;
   deleteFile(filePath: string): Promise<IpcResult<null>>;
   renameFile(oldPath: string, newName: string): Promise<IpcResult<string>>;

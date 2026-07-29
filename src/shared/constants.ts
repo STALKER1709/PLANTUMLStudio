@@ -17,6 +17,7 @@ export const IPC_CHANNELS = {
   LIST_FILES: 'file:list',
   READ_FILE: 'file:read',
   SAVE_FILE: 'file:save',
+  SAVE_FILE_AS: 'file:saveAs',
   CREATE_FILE: 'file:create',
   DELETE_FILE: 'file:delete',
   RENAME_FILE: 'file:rename',
