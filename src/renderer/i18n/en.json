@@ -43,7 +43,7 @@
   "preview.rendering": "Rendering",
   "preview.empty": "Write some PlantUML code to see the diagram appear here.",
   "preview.edit": "Edit",
-  "preview.editHint": "Drag diagram elements with the mouse. The source is left untouched.",
+  "preview.editHint": "Drag diagram elements with the mouse; a package carries its contents along. The source is left untouched.",
   "preview.resetLayout": "Undo every move",
   "preview.duration": "Rendered in {ms} ms",
 

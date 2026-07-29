@@ -10,6 +10,8 @@
  * aux régénérations du diagramme tant que l'élément garde son nom.
  */
 
+import { applySequenceOffsets, isSequenceDiagram } from './sequenceLayout';
+
 export interface Point {
   x: number;
   y: number;
@@ -157,28 +159,150 @@ function round(value: number): string {
   return (Math.round(value * 100) / 100).toString();
 }
 
+/** Ce qu'il faut connaître d'un élément pour établir les emboîtements. */
+export interface Containable {
+  id: string;
+  /** Rectangle englobant d'origine, invariant sous nos transformations. */
+  box: Box;
+  /** `true` pour un regroupement, seul candidat au rôle de contenant. */
+  container: boolean;
+}
+
+/** Tolérance d'emboîtement, en unités SVG : absorbe l'épaisseur des traits. */
+const CONTAINMENT_TOLERANCE = 1.5;
+
+function boxArea(box: Box): number {
+  return box.width * box.height;
+}
+
+/** `true` si `inner` tient entièrement dans `outer`, qui est strictement plus grand. */
+export function containsBox(outer: Box, inner: Box): boolean {
+  return (
+    boxArea(outer) > boxArea(inner) &&
+    outer.x - CONTAINMENT_TOLERANCE <= inner.x &&
+    outer.y - CONTAINMENT_TOLERANCE <= inner.y &&
+    outer.x + outer.width + CONTAINMENT_TOLERANCE >= inner.x + inner.width &&
+    outer.y + outer.height + CONTAINMENT_TOLERANCE >= inner.y + inner.height
+  );
+}
+
+/**
+ * Reconstruit l'arbre d'emboîtement du diagramme : à chaque élément, le
+ * regroupement qui le contient.
+ *
+ * Le SVG de PlantUML est plat — un paquetage et les classes qu'il renferme y
+ * sont frères — et ne porte aucune information de parenté. Elle se déduit donc
+ * de la géométrie : le contenant retenu est le plus petit de ceux qui englobent
+ * l'élément, ce qui donne le bon parent même pour des paquetages imbriqués.
+ */
+export function buildHierarchy(items: readonly Containable[]): Map<string, string> {
+  const parents = new Map<string, string>();
+  const containers = items.filter((item) => item.container);
+  if (containers.length === 0) return parents;
+
+  items.forEach((item) => {
+    let closest: Containable | undefined;
+    containers.forEach((candidate) => {
+      if (candidate.id === item.id || !containsBox(candidate.box, item.box)) return;
+      if (!closest || boxArea(candidate.box) < boxArea(closest.box)) closest = candidate;
+    });
+    if (closest) parents.set(item.id, closest.id);
+  });
+
+  return parents;
+}
+
+/**
+ * Décalage réellement subi par un élément : le sien, augmenté de ceux de tous
+ * les regroupements qui le contiennent.
+ *
+ * C'est l'héritage attendu d'un diagramme : déplacer un paquetage emporte les
+ * classes qu'il contient, et une classe déjà déplacée à la main conserve en
+ * plus son propre décalage.
+ */
+export function resolveOffset(
+  id: string,
+  offsets: LayoutOffsets,
+  parents: ReadonlyMap<string, string>
+): Point {
+  const total: Point = { x: 0, y: 0 };
+  // Un emboîtement déduit de la géométrie ne devrait pas boucler ; la garde
+  // évite qu'une géométrie inattendue ne fige l'interface.
+  const visited = new Set<string>();
+  let current: string | undefined = id;
+
+  while (current !== undefined && !visited.has(current)) {
+    visited.add(current);
+    const own = offsets[current];
+    if (own) {
+      total.x += own.x;
+      total.y += own.y;
+    }
+    current = parents.get(current);
+  }
+
+  return total;
+}
+
+const NEGLIGIBLE = 1e-6;
+
+function isMoved(offset: Point): boolean {
+  return Math.abs(offset.x) > NEGLIGIBLE || Math.abs(offset.y) > NEGLIGIBLE;
+}
+
+function samePoint(a: Point, b: Point): boolean {
+  return Math.abs(a.x - b.x) < NEGLIGIBLE && Math.abs(a.y - b.y) < NEGLIGIBLE;
+}
+
 /** Attributs où sont mémorisées les géométries d'origine, avant déplacement. */
 const ORIGINAL_PATH = 'data-puml-d';
 const ORIGINAL_POINTS = 'data-puml-points';
 const ORIGINAL_X = 'data-puml-x';
 const ORIGINAL_Y = 'data-puml-y';
 
-export interface EntityHandle {
-  id: string;
+export interface EntityHandle extends Containable {
   group: SVGGElement;
-  /** Rectangle englobant d'origine, invariant sous nos transformations. */
-  box: Box;
   /** Centre de la géométrie d'origine. */
   center: Point;
   /** `true` pour un cas d'utilisation : une flèche s'y arrête sur l'ovale. */
   ellipse: boolean;
 }
 
+/**
+ * Éléments déplaçables : tout ce que PlantUML identifie par `data-entity`.
+ *
+ * `g.entity` couvre les classes, acteurs, cas d'utilisation, objets, composants,
+ * artefacts et notes ; `g.cluster` les regroupements — paquetages, nœuds de
+ * déploiement, frontières de système.
+ */
+export const MOVABLE_SELECTOR = 'g[data-entity]';
+
+/**
+ * Complète l'annotation du SVG là où PlantUML l'a omise.
+ *
+ * Les états d'un diagramme d'états ne reçoivent qu'un attribut `id` — alors que
+ * les liens, eux, les désignent bien par `data-entity-1` / `data-entity-2`. On
+ * leur pose l'attribut manquant, ce qui les rend déplaçables par le même chemin
+ * que tout le reste.
+ */
+function annotateImplicitEntities(root: SVGSVGElement): void {
+  root.querySelectorAll<SVGGElement>('g[id]:not([data-entity])').forEach((group) => {
+    // Les groupes déjà classés (liens, regroupements) sont annotés correctement.
+    if (group.classList.length > 0) return;
+    const id = group.getAttribute('id');
+    if (!id) return;
+    // Un état imbriqué s'appelle « Composite.Etat » dans le SVG, mais « Etat »
+    // dans les liens : c'est ce nom court qui sert de clef.
+    group.setAttribute('data-entity', id.split('.').pop() as string);
+  });
+}
+
 /** Recense les éléments déplaçables d'un diagramme rendu. */
 export function indexEntities(root: SVGSVGElement): Map<string, EntityHandle> {
   const entities = new Map<string, EntityHandle>();
+  annotateImplicitEntities(root);
 
-  root.querySelectorAll<SVGGElement>('g.entity[data-entity]').forEach((group) => {
+  root.querySelectorAll<SVGGElement>(MOVABLE_SELECTOR).forEach((group) => {
     const id = group.getAttribute('data-entity');
     if (!id) return;
 
@@ -195,6 +319,7 @@ export function indexEntities(root: SVGSVGElement): Map<string, EntityHandle> {
       // Un cas d'utilisation est dessiné par une ellipse : s'arrêter au
       // rectangle englobant laisserait un écart visible dans les angles.
       ellipse: group.querySelector('ellipse') !== null,
+      container: group.classList.contains('cluster'),
     });
   });
 
@@ -210,19 +335,35 @@ export function indexEntities(root: SVGSVGElement): Map<string, EntityHandle> {
  * mouvement de souris sans que les transformations se cumulent.
  */
 export function applyLayoutOffsets(root: SVGSVGElement, offsets: LayoutOffsets): void {
+  // Le diagramme de séquence a sa propre géométrie : participants en colonnes,
+  // messages accrochés aux lignes de vie.
+  if (isSequenceDiagram(root)) {
+    applySequenceOffsets(root, offsets);
+    fitViewBox(root, Object.values(offsets).some(isMoved));
+    return;
+  }
+
   const entities = indexEntities(root);
+  const parents = buildHierarchy(Array.from(entities.values()));
+
+  // Les décalages hérités sont calculés une fois : les liens s'appuient sur les
+  // mêmes valeurs que les éléments, ce qui garantit qu'ils restent accrochés.
+  const applied = new Map<string, Point>();
+  entities.forEach((entity) => {
+    applied.set(entity.id, resolveOffset(entity.id, offsets, parents));
+  });
 
   entities.forEach((entity) => {
-    const offset = offsets[entity.id];
-    if (offset) translateGroup(entity.group, offset);
+    const offset = applied.get(entity.id) as Point;
+    if (isMoved(offset)) translateGroup(entity.group, offset);
     else entity.group.removeAttribute('transform');
   });
 
   root.querySelectorAll<SVGGElement>('g.link[data-entity-1]').forEach((link) => {
-    reflowLink(link, entities, offsets);
+    reflowLink(link, entities, applied);
   });
 
-  fitViewBox(root, Object.keys(offsets).length > 0);
+  fitViewBox(root, Array.from(applied.values()).some(isMoved));
 }
 
 const ORIGINAL_VIEWBOX = 'data-puml-viewbox';
@@ -288,7 +429,7 @@ function translateGroup(group: SVGGElement, offset: Point): void {
 function reflowLink(
   link: SVGGElement,
   entities: Map<string, EntityHandle>,
-  offsets: LayoutOffsets
+  applied: ReadonlyMap<string, Point>
 ): void {
   const from = entities.get(link.getAttribute('data-entity-1') ?? '');
   const to = entities.get(link.getAttribute('data-entity-2') ?? '');
@@ -298,24 +439,32 @@ function reflowLink(
   const originalPath = principal ? readOriginal(principal, ORIGINAL_PATH, 'd') : null;
   const originalEndpoints = originalPath ? pathEndpoints(originalPath) : null;
 
-  const deplace = (entity: EntityHandle | undefined) =>
-    entity !== undefined && offsets[entity.id] !== undefined;
+  const ORIGINE: Point = { x: 0, y: 0 };
+  const decalageDepart = (from && applied.get(from.id)) ?? ORIGINE;
+  const decalageArrivee = (to && applied.get(to.id)) ?? ORIGINE;
 
   // Rien n'a bougé aux extrémités : la mise en page calculée par PlantUML est
   // meilleure que tout ce qu'on pourrait recalculer, on la restitue.
-  if (!from || !to || !originalEndpoints || (!deplace(from) && !deplace(to))) {
+  if (
+    !from ||
+    !to ||
+    !originalEndpoints ||
+    (!isMoved(decalageDepart) && !isMoved(decalageArrivee))
+  ) {
     restoreOriginalGeometry(link);
     return;
   }
 
-  if (from.id === to.id) {
-    // Lien réflexif : il suit son élément sans changer de forme.
-    translateLinkGeometry(link, offsets[from.id] ?? { x: 0, y: 0 });
+  // Les deux extrémités subissent le même déplacement — lien réflexif, ou lien
+  // interne à un paquetage qu'on vient de déplacer : le tracé calculé par
+  // PlantUML reste valable, il suffit de l'emmener avec elles.
+  if (samePoint(decalageDepart, decalageArrivee)) {
+    translateLinkGeometry(link, decalageDepart);
     return;
   }
 
-  const boiteDepart = translateBox(from.box, offsets[from.id]);
-  const boiteArrivee = translateBox(to.box, offsets[to.id]);
+  const boiteDepart = translateBox(from.box, decalageDepart);
+  const boiteArrivee = translateBox(to.box, decalageArrivee);
   const centreDepart = boxCenter(boiteDepart);
   const centreArrivee = boxCenter(boiteArrivee);
 

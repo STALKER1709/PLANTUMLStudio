@@ -133,6 +133,22 @@ Ce que cela suppose, et ce que cela implique :
   (`data-entity`), chaque lien ses deux extrémités. Les déplacements sont donc indexés par
   identifiant : ils **survivent aux régénérations** du diagramme tant que l'élément garde son
   nom dans la source.
+- **Tout élément identifié est déplaçable** : classes, objets, acteurs, cas d'utilisation,
+  composants, artefacts, nœuds, notes, états — et les **regroupements** eux-mêmes, paquetages
+  et nœuds de déploiement, qu'on saisit par leur bandeau de titre ou par un point vide de leur
+  cadre. Les états ne recevant qu'un attribut `id`, l'application leur pose l'identifiant que
+  leurs liens utilisent déjà.
+- **L'héritage des déplacements.** Déplacer un paquetage emporte tout ce qu'il contient, y
+  compris les paquetages imbriqués et leur propre contenu. Le SVG de PlantUML étant plat — un
+  paquetage et ses classes y sont frères, sans lien de parenté déclaré —, l'emboîtement est
+  déduit de la géométrie : le contenant retenu est le **plus petit** de ceux qui englobent
+  l'élément. Un élément déjà déplacé à la main conserve son décalage propre, qui **s'ajoute** à
+  celui de son contenant. Un lien dont les deux extrémités subissent le même déplacement — cas
+  d'un lien interne à un paquetage — est emmené tel quel : le tracé calculé par PlantUML est
+  conservé.
+- **Le cadre d'un paquetage ne se redimensionne pas.** Sortir une classe de son paquetage la
+  montre à l'extérieur du cadre, alors que la source l'y place toujours. C'est un choix : le
+  déplacement demandé est respecté, pas réinterprété.
 - **La source n'est jamais modifiée.** Les déplacements vivent à côté d'elle, le temps de la
   session ; ils ne sont pas enregistrés dans le `.puml`.
 - **Les flèches sont recalculées, pas déformées.** Dès qu'une de ses extrémités bouge, le lien
@@ -144,6 +160,14 @@ Ce que cela suppose, et ce que cela implique :
 - **Le contournement calculé par PlantUML est perdu sur les liens déplacés.** Une courbe qui
   évitait un obstacle devient un segment droit ; les liens dont aucune extrémité n'a bougé
   gardent en revanche exactement le tracé d'origine.
+- **Le diagramme de séquence obéit à d'autres règles.** L'axe vertical y porte la chronologie :
+  un participant ne se règle donc **qu'en abscisse**, ce que signale le curseur. Sa tête, son
+  pied et sa ligne de vie se déplacent ensemble ; les messages restent accrochés, chaque
+  extrémité suivant la ligne de vie dont elle est la plus proche — un message s'allonge du
+  côté déplacé sans que sa pointe de flèche quitte sa cible.
+- **Les diagrammes d'activité ne sont pas manipulables.** PlantUML n'y annote aucun élément :
+  rien ne permet de rattacher une forme du SVG à une instruction de la source. Leur disposition
+  se règle par le texte (`-[hidden]->`, `together`, ordre des déclarations).
 - **L'export suit ce que vous voyez.** Dès qu'un déplacement existe, « Exporter » écrit le
   rendu affiché — SVG et PDF depuis le texte SVG, PNG rastérisé par l'application — au lieu de
   régénérer depuis la source.

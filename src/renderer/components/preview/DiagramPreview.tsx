@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../../../shared/constants';
 import { useDebouncedRender } from '../../hooks/useDebouncedRender';
-import { useDiagramEditing } from '../../hooks/useDiagramEditing';
+import { GRABBABLE, useDiagramEditing } from '../../hooks/useDiagramEditing';
 import { useTranslation } from '../../i18n';
 import type { LayoutOffsets, Point } from '../../utils/diagramLayout';
 import { readSvgSize, sanitizeSvg } from '../../utils/sanitizeSvg';
@@ -109,7 +109,7 @@ export function DiagramPreview({
     if (event.button !== 0) return;
     // En mode édition, un appui sur un élément lui appartient : il le déplace
     // au lieu de faire glisser la vue entière.
-    if (isEditing && (event.target as Element).closest('g.entity[data-entity]')) return;
+    if (isEditing && (event.target as Element).closest(GRABBABLE)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     panOrigin.current = { pointerX: event.clientX, pointerY: event.clientY, offset };
     setIsPanning(true);

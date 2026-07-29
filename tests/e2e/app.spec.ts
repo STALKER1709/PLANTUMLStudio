@@ -29,6 +29,16 @@ test.afterAll(async () => {
   await app?.close();
 });
 
+/**
+ * Le bouton bascule, et les tests partagent la même fenêtre : cliquer sans
+ * regarder l'état désactiverait l'édition laissée active par le test précédent.
+ */
+async function activerEdition(): Promise<void> {
+  const bouton = window.locator('button', { hasText: /^Éditer$/ });
+  if ((await bouton.getAttribute('aria-pressed')) !== 'true') await bouton.click();
+  await expect(bouton).toHaveAttribute('aria-pressed', 'true');
+}
+
 test("l'application démarre et affiche ses trois panneaux", async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : seul l’écran de diagnostic s’affiche.');
 
@@ -131,7 +141,7 @@ test('les flèches se réajustent quand un élément change de côté', async ()
     timeout: 30_000,
   });
 
-  await window.locator('button', { hasText: /^Éditer$/ }).click();
+  await activerEdition();
 
   const lien = window.locator('g.link[data-entity-1="UC"] path');
   const avant = await lien.getAttribute('d');
@@ -154,6 +164,96 @@ test('les flèches se réajustent quand un élément change de côté', async ()
   expect(apres, 'le tracé est recalculé, pas étiré').toMatch(/^M[-\d.]+,[-\d.]+ L[-\d.]+,[-\d.]+$/);
   // Le départ est désormais à droite de l'arrivée : la flèche a changé de bord.
   expect(Number(x1)).toBeGreaterThan(Number(x2));
+});
+
+test('un paquetage déplacé emmène son contenu et ses liens', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    '@startuml\npackage "Metier" as PKG {\n class Compte\n}\nclass Client\nClient --> Compte\n@enduml'
+  );
+  await expect(window.locator('.preview-stage svg .cluster').first()).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await activerEdition();
+
+  const paquetage = window.locator('g.cluster[data-entity="PKG"]');
+  const classe = window.locator('g.entity[data-entity="Compte"]');
+  const lien = window.locator('g.link[data-entity-1="Client"] path');
+
+  const boitePaquetage = await paquetage.boundingBox();
+  const avantLien = await lien.getAttribute('d');
+  if (!boitePaquetage) throw new Error('paquetage introuvable');
+  expect(await classe.getAttribute('transform'), 'aucun déplacement au départ').toBeNull();
+
+  // On saisit le paquetage par son bandeau de titre, hors de la classe qu'il
+  // contient : c'est bien le contenant qui doit être pris.
+  await window.mouse.move(boitePaquetage.x + 18, boitePaquetage.y + 10);
+  await window.mouse.down();
+  await window.mouse.move(boitePaquetage.x + 18 + 220, boitePaquetage.y + 10 + 60, { steps: 10 });
+  await window.mouse.up();
+
+  // La classe n'a pas été saisie : elle suit parce qu'elle est contenue.
+  await expect(paquetage).toHaveAttribute('transform', 'translate(220,60)');
+  await expect(classe, 'le contenu hérite du déplacement').toHaveAttribute(
+    'transform',
+    'translate(220,60)'
+  );
+  // Ce qui est resté hors du paquetage ne bouge pas.
+  expect(await window.locator('g.entity[data-entity="Client"]').getAttribute('transform')).toBeNull();
+
+  // Le lien vient de l'extérieur : il doit être réacheminé vers la classe.
+  const apresLien = (await lien.getAttribute('d')) ?? '';
+  expect(apresLien).not.toBe(avantLien);
+  const arrivee = apresLien.match(/L([-\d.]+),([-\d.]+)$/);
+  expect(arrivee, 'le tracé rejoint la classe déplacée').not.toBeNull();
+});
+
+test('un participant de séquence se règle en abscisse, messages compris', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    '@startuml\nparticipant A\nparticipant B\nA -> B : demande\n@enduml'
+  );
+  await expect(window.locator('.preview-stage svg g.message').first()).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await activerEdition();
+
+  const tete = window.locator('g.participant.participant-head[data-participant="B"]');
+  const trait = window.locator('g.message line');
+  const [avantDebut, avantFin] = [
+    await trait.getAttribute('x1'),
+    await trait.getAttribute('x2'),
+  ];
+
+  const boite = await tete.boundingBox();
+  if (!boite) throw new Error('participant introuvable');
+  await window.mouse.move(boite.x + boite.width / 2, boite.y + boite.height / 2);
+  await window.mouse.down();
+  // Le geste comporte une composante verticale, qui doit être ignorée.
+  await window.mouse.move(boite.x + boite.width / 2 + 150, boite.y + boite.height / 2 + 40, {
+    steps: 10,
+  });
+  await window.mouse.up();
+
+  // Tête, pied et ligne de vie se déplacent ensemble, et seulement en abscisse.
+  await expect(tete).toHaveAttribute('transform', 'translate(150,0)');
+  await expect(
+    window.locator('g.participant.participant-tail[data-participant="B"]')
+  ).toHaveAttribute('transform', 'translate(150,0)');
+
+  // Le message s'allonge du côté déplacé, et de lui seul.
+  expect(Number(await trait.getAttribute('x1'))).toBeCloseTo(Number(avantDebut), 1);
+  expect(Number(await trait.getAttribute('x2'))).toBeCloseTo(Number(avantFin) + 150, 1);
 });
 
 test("l'application ne déclenche aucune requête réseau", async () => {

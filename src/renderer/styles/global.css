@@ -457,19 +457,35 @@ input[type='text'] {
 
 /* ------------------------------------------------- Édition du rendu */
 
-.preview-stage.editing svg .entity {
+.preview-stage.editing svg [data-entity],
+.preview-stage.editing svg [data-participant] {
   cursor: grab;
 }
 
-.preview-stage.editing svg .entity:hover > * {
+/* Un participant ne se règle qu'horizontalement. */
+.preview-stage.editing svg [data-participant] {
+  cursor: ew-resize;
+}
+
+/* Le contour d'un paquetage est tracé sans remplissage : sans cela, seule la
+   ligne elle-même serait saisissable. Les éléments qu'il contient étant
+   dessinés après lui, ils continuent de recevoir le clic en priorité. */
+.preview-stage.editing svg .cluster > path,
+.preview-stage.editing svg .cluster > rect {
+  pointer-events: all;
+}
+
+.preview-stage.editing svg [data-entity]:hover > *,
+.preview-stage.editing svg [data-participant]:hover > * {
   /* Halo discret : l'élément survolé est saisissable. */
   filter: drop-shadow(0 0 3px var(--color-accent));
 }
 
-.preview-stage.editing svg .entity.dragging {
+.preview-stage.editing svg [data-entity].dragging {
   cursor: grabbing;
 }
 
-.preview-stage.editing svg .entity.dragging > * {
+.preview-stage.editing svg [data-entity].dragging > *,
+.preview-stage.editing svg [data-participant].dragging > * {
   filter: drop-shadow(0 0 5px var(--color-accent));
 }

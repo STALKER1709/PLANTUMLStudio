@@ -8,7 +8,12 @@ interface DragState {
   origin: Point;
   /** Décalage déjà appliqué à l'élément avant ce glisser. */
   base: Point;
+  /** `true` pour un participant : l'axe vertical porte la chronologie. */
+  horizontal: boolean;
 }
+
+/** Éléments saisissables, quel que soit le type de diagramme. */
+export const GRABBABLE = 'g[data-entity], g[data-participant]';
 
 export interface DiagramEditingOptions {
   /** Conteneur du SVG rendu. */
@@ -65,8 +70,12 @@ export function useDiagramEditing({
 
     const handleDown = (event: PointerEvent) => {
       const target = event.target as Element | null;
-      const group = target?.closest<SVGGElement>('g.entity[data-entity]');
-      const id = group?.getAttribute('data-entity');
+      // Éléments et regroupements sont frères dans le SVG, et les seconds sont
+      // dessinés en premier : cliquer une classe saisit la classe, cliquer le
+      // fond d'un paquetage saisit le paquetage.
+      const group = target?.closest<SVGGElement>(GRABBABLE);
+      const participant = group?.getAttribute('data-participant');
+      const id = group?.getAttribute('data-entity') ?? participant;
       if (!group || !id) return;
 
       // Le déplacement d'un élément prime sur le défilement de la vue.
@@ -77,6 +86,7 @@ export function useDiagramEditing({
         id,
         origin: { x: event.clientX, y: event.clientY },
         base: offsetsRef.current[id] ?? { x: 0, y: 0 },
+        horizontal: participant !== null && participant !== undefined,
       };
       group.classList.add('dragging');
       stage.setPointerCapture(event.pointerId);
@@ -92,7 +102,9 @@ export function useDiagramEditing({
       const facteur = zoomRef.current || 1;
       onMove(drag.id, {
         x: drag.base.x + (event.clientX - drag.origin.x) / facteur,
-        y: drag.base.y + (event.clientY - drag.origin.y) / facteur,
+        // Un participant de diagramme de séquence ne se règle qu'en abscisse :
+        // l'axe vertical porte la chronologie des messages.
+        y: drag.horizontal ? 0 : drag.base.y + (event.clientY - drag.origin.y) / facteur,
       });
     };
 

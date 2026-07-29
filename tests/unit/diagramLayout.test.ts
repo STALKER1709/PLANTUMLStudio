@@ -4,9 +4,12 @@ import {
   angleOf,
   applySimilarity,
   boxCenter,
+  buildHierarchy,
   clipToShape,
+  containsBox,
   distance,
   nearestPoint,
+  resolveOffset,
   rigidTransform,
   translateBox,
   isIdentity,
@@ -190,6 +193,74 @@ describe('Réacheminement des flèches', () => {
   it('trouve le point d’ancrage d’une pointe de flèche', () => {
     const proche = nearestPoint('10,10 200,200 12,11', { x: 11, y: 11 });
     expect(proche).toEqual({ x: 12, y: 11 });
+  });
+});
+
+describe('Héritage des déplacements', () => {
+  // Disposition typique : un paquetage, une classe dedans, un paquetage
+  // imbriqué avec sa propre classe, et une classe restée à l'extérieur.
+  const elements = [
+    { id: 'PKG', box: { x: 0, y: 0, width: 400, height: 300 }, container: true },
+    { id: 'Compte', box: { x: 20, y: 40, width: 100, height: 50 }, container: false },
+    { id: 'INTERNE', box: { x: 150, y: 40, width: 200, height: 200 }, container: true },
+    { id: 'Depot', box: { x: 170, y: 80, width: 100, height: 50 }, container: false },
+    { id: 'Client', box: { x: 500, y: 40, width: 100, height: 50 }, container: false },
+  ];
+
+  it('reconnaît qu’un élément tient dans un regroupement', () => {
+    expect(containsBox(elements[0].box, elements[1].box)).toBe(true);
+    expect(containsBox(elements[0].box, elements[4].box)).toBe(false);
+    // Un rectangle ne se contient pas lui-même : sans quoi deux éléments
+    // superposés se désigneraient mutuellement comme parents.
+    expect(containsBox(elements[0].box, elements[0].box)).toBe(false);
+  });
+
+  it('rattache chaque élément au plus petit regroupement qui l’englobe', () => {
+    const parents = buildHierarchy(elements);
+
+    expect(parents.get('Compte')).toBe('PKG');
+    // « Depot » tient dans les deux paquetages : c'est le plus proche qui compte.
+    expect(parents.get('Depot')).toBe('INTERNE');
+    expect(parents.get('INTERNE')).toBe('PKG');
+    expect(parents.has('Client')).toBe(false);
+    expect(parents.has('PKG')).toBe(false);
+  });
+
+  it('fait suivre le contenu quand le contenant se déplace', () => {
+    const parents = buildHierarchy(elements);
+    const offsets = { PKG: { x: 30, y: -10 } };
+
+    // La classe n'a aucun décalage propre, et se déplace pourtant.
+    expect(resolveOffset('Compte', offsets, parents)).toEqual({ x: 30, y: -10 });
+    // L'héritage traverse les paquetages imbriqués.
+    expect(resolveOffset('Depot', offsets, parents)).toEqual({ x: 30, y: -10 });
+    // Ce qui est en dehors ne bouge pas.
+    expect(resolveOffset('Client', offsets, parents)).toEqual({ x: 0, y: 0 });
+  });
+
+  it('ajoute le déplacement propre d’un élément à celui de son contenant', () => {
+    const parents = buildHierarchy(elements);
+    const offsets = {
+      PKG: { x: 100, y: 0 },
+      INTERNE: { x: 10, y: 5 },
+      Depot: { x: 1, y: 2 },
+    };
+
+    expect(resolveOffset('Depot', offsets, parents)).toEqual({ x: 111, y: 7 });
+    expect(resolveOffset('INTERNE', offsets, parents)).toEqual({ x: 110, y: 5 });
+  });
+
+  it('ne boucle pas sur une hiérarchie incohérente', () => {
+    const cyclique = new Map([
+      ['A', 'B'],
+      ['B', 'A'],
+    ]);
+
+    // Chaque décalage n'est compté qu'une fois, et l'appel se termine.
+    expect(resolveOffset('A', { A: { x: 1, y: 0 }, B: { x: 2, y: 0 } }, cyclique)).toEqual({
+      x: 3,
+      y: 0,
+    });
   });
 });
 
