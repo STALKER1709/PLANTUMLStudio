@@ -116,12 +116,24 @@ describe('Couverture des 14 diagrammes', () => {
         expect(section.fields.length, `${schema.label} / ${section.label}`).toBeGreaterThan(0);
         section.fields.forEach((field) => {
           // Un champ « reference » qui pointe une section inexistante
-          // afficherait une liste vide, sans que rien ne le signale.
+          // afficherait une liste vide, sans que rien ne le signale. Une
+          // référence s'écrit « section » ou « section.champ », seule ou en
+          // liste.
           if (field.kind !== 'reference') return;
-          expect(
-            schema.sections.some((candidat) => candidat.id === field.references),
-            `${schema.label} / ${section.label} / ${field.label}`
-          ).toBe(true);
+          const specs =
+            typeof field.references === 'string' ? [field.references] : (field.references ?? []);
+          expect(specs.length, `${schema.label} / ${section.label} / ${field.label}`).toBeGreaterThan(0);
+          specs.forEach((spec) => {
+            const [sectionId, fieldName] = spec.split('.');
+            const cible = schema.sections.find((candidat) => candidat.id === sectionId);
+            expect(cible, `${schema.label} → ${spec}`).toBeDefined();
+            if (fieldName !== undefined) {
+              expect(
+                cible?.fields.some((candidat) => candidat.name === fieldName),
+                `${schema.label} → ${spec}`
+              ).toBe(true);
+            }
+          });
         });
       });
     });
@@ -157,14 +169,11 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des sources produites', () => 
     const source = schema.build('Épreuve', {
       systeme: [{ nom: 'Système « central »' }],
       acteurs: [
-        { nom: 'Client inscrit', role: 'principal' },
-        { nom: 'Client inscrit', role: 'principal' },
-        { nom: 'Service de paiement', role: 'secondaire' },
+        { nom: 'Client inscrit', role: 'principal', herite: '', cas: 'Régler (100 %)' },
+        { nom: 'Client inscrit', role: 'principal', herite: '', cas: 'Régler (100 %)' },
       ],
-      cas: [{ nom: 'Régler (100 %)' }, { nom: 'Régler (100 %)' }],
-      associations: [{ acteur: 'Client inscrit', cas: 'Régler (100 %)' }],
+      casInternes: [],
       relationsCas: [],
-      generalisations: [],
     });
 
     expect(erreurDeRendu(source), source).toBeNull();
@@ -177,16 +186,11 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des sources produites', () => 
     const source = schema.build('Épreuve', {
       systeme: [{ nom: 'Plateforme' }],
       acteurs: [
-        { nom: 'Client', role: 'principal' },
-        { nom: 'API de paiement', role: 'secondaire' },
+        { nom: 'Client', role: 'principal', herite: '', cas: 'Payer' },
+        { nom: 'API de paiement', role: 'secondaire', herite: '', cas: 'Payer' },
       ],
-      cas: [{ nom: 'Payer' }],
-      associations: [
-        { acteur: 'Client', cas: 'Payer' },
-        { acteur: 'API de paiement', cas: 'Payer' },
-      ],
+      casInternes: [],
       relationsCas: [],
-      generalisations: [],
     });
 
     // Un acteur secondaire est un système : rectangle stéréotypé.
@@ -196,6 +200,9 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des sources produites', () => 
     expect(source).toContain('Client -- Payer');
     // …le secondaire à droite.
     expect(source).toContain('Payer -- API_de_paiement');
+    // Deux acteurs sans lien d'héritage partagent légitimement un cas : les
+    // deux flèches sont conservées, et le cas n'est déclaré qu'une fois.
+    expect(source.match(/usecase "Payer"/g)).toHaveLength(1);
     expect(erreurDeRendu(source), source).toBeNull();
   });
 
@@ -206,13 +213,11 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des sources produites', () => 
     const source = schema.build('Épreuve', {
       systeme: [{ nom: 'Plateforme' }],
       acteurs: [
-        { nom: 'Visiteur', role: 'principal' },
-        { nom: 'Client', role: 'principal' },
+        { nom: 'Visiteur', role: 'principal', herite: '', cas: 'Consulter' },
+        { nom: 'Client', role: 'principal', herite: 'Visiteur', cas: 'Réserver' },
       ],
-      cas: [{ nom: 'Consulter' }],
-      associations: [{ acteur: 'Visiteur', cas: 'Consulter' }],
+      casInternes: [],
       relationsCas: [],
-      generalisations: [{ enfant: 'Client', parent: 'Visiteur' }],
     });
 
     // Les trois leviers documentés sont écrits par l'assistant.
@@ -220,5 +225,102 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des sources produites', () => 
     expect(source).toContain('together {');
     expect(source).toContain('<|-[norank]-');
     expect(erreurDeRendu(source), source).toBeNull();
+  });
+});
+
+describe('Héritage : pas deux flèches vers le même cas', () => {
+  const schema = schemaById('08-diagramme-cas-utilisation');
+  if (!schema) throw new Error('schéma introuvable');
+
+  /** Compte les associations d'un acteur vers un cas dans la source produite. */
+  const fleches = (source: string, acteur: string, cas: string) =>
+    (source.match(new RegExp(`^${acteur} -- ${cas}$`, 'gm')) ?? []).length;
+
+  it('ne redessine pas le cas qu’un acteur tient de son parent', () => {
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [
+        { nom: 'Visiteur', role: 'principal', herite: '', cas: 'Consulter' },
+        // L'utilisateur répète le cas hérité : c'est précisément ce que la
+        // règle doit rattraper.
+        { nom: 'Client', role: 'principal', herite: 'Visiteur', cas: 'Consulter\nRéserver' },
+      ],
+      casInternes: [],
+      relationsCas: [],
+    });
+
+    expect(fleches(source, 'Visiteur', 'Consulter')).toBe(1);
+    expect(fleches(source, 'Client', 'Consulter'), 'la flèche héritée est retirée').toBe(0);
+    expect(fleches(source, 'Client', 'Reserver')).toBe(1);
+    // Le retrait est expliqué dans la source, plutôt que silencieux.
+    expect(source).toContain("hérite de Visiteur");
+    expect(source).toContain('Consulter');
+  });
+
+  it('remonte toute la chaîne d’héritage, pas seulement le parent direct', () => {
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [
+        { nom: 'Visiteur', role: 'principal', herite: '', cas: 'Consulter' },
+        { nom: 'Client', role: 'principal', herite: 'Visiteur', cas: 'Réserver' },
+        { nom: 'Premium', role: 'principal', herite: 'Client', cas: 'Consulter\nRéserver\nCumuler' },
+      ],
+      casInternes: [],
+      relationsCas: [],
+    });
+
+    // « Consulter » vient du grand-parent, « Réserver » du parent : les deux
+    // sont hérités, seul « Cumuler » est propre à l'acteur.
+    expect(fleches(source, 'Premium', 'Consulter')).toBe(0);
+    expect(fleches(source, 'Premium', 'Reserver')).toBe(0);
+    expect(fleches(source, 'Premium', 'Cumuler')).toBe(1);
+  });
+
+  it('garde les deux flèches quand les acteurs n’ont aucun lien d’héritage', () => {
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [
+        { nom: 'Client', role: 'principal', herite: '', cas: 'Consulter' },
+        { nom: 'Agent', role: 'principal', herite: '', cas: 'Consulter' },
+      ],
+      casInternes: [],
+      relationsCas: [],
+    });
+
+    // Deux acteurs indépendants peuvent exécuter le même cas : c'est licite,
+    // et la règle ne vise que l'héritage.
+    expect(fleches(source, 'Client', 'Consulter')).toBe(1);
+    expect(fleches(source, 'Agent', 'Consulter')).toBe(1);
+    // Un seul cas, malgré les deux mentions.
+    expect(source.match(/usecase "Consulter"/g)).toHaveLength(1);
+  });
+
+  it('ne boucle pas sur un héritage circulaire', () => {
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [
+        { nom: 'A', role: 'principal', herite: 'B', cas: 'Faire' },
+        { nom: 'B', role: 'principal', herite: 'A', cas: 'Faire' },
+      ],
+      casInternes: [],
+      relationsCas: [],
+    });
+
+    // La saisie est incohérente, mais l'assistant doit rendre la main.
+    expect(source).toContain('@enduml');
+  });
+
+  it('déclare les cas que personne n’exécute directement', () => {
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [{ nom: 'Client', role: 'principal', herite: '', cas: 'Réserver' }],
+      casInternes: [{ nom: "S'authentifier" }],
+      relationsCas: [{ source: 'Réserver', type: 'include', cible: "S'authentifier" }],
+    });
+
+    expect(source).toContain('usecase "S\'authentifier"');
+    // Aucun acteur ne le déclenche : il n'a pas d'association.
+    expect(source).not.toMatch(/^\w+ -- S_authentifier$/m);
+    expect(source).toContain('..> S_authentifier : <<include>>');
   });
 });

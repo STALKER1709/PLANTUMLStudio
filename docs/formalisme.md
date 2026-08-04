@@ -110,8 +110,14 @@ l'application écrit la source. Les 14 types sont couverts.
 Trois principes :
 
 - **Les listes liées évitent d'avoir à retenir les noms.** Un champ « De » ou « Vers » ne
-  propose que les éléments déjà déclarés plus haut dans le formulaire. Impossible de désigner
-  un élément qui n'existe pas.
+  propose que les éléments déjà déclarés plus haut dans le formulaire — y compris ceux saisis
+  dans une liste, comme les cas d'utilisation d'un acteur. Impossible de désigner un élément
+  qui n'existe pas.
+- **Le diagramme de cas d'utilisation se saisit par acteur.** Une ligne par acteur : son nom,
+  son rôle (principal ou secondaire), de qui il hérite, et la liste de tout ce qu'il fait dans
+  le système. Les associations et les généralisations en découlent ; il n'y a pas à les saisir
+  séparément. Une dernière section reçoit les cas qu'aucun acteur ne déclenche lui-même, comme
+  un « S'authentifier » atteint uniquement par des `<<include>>`.
 - **Les identifiants sont dérivés des libellés.** « Réserver une prestation » devient
   `Reserver_une_prestation` : accents retirés, ponctuation remplacée, et un suffixe numérique
   si deux libellés se ressemblent au point de donner le même identifiant. La source reste donc
@@ -190,6 +196,31 @@ le troisième s'écrit dans votre source.
 | `linetype polyline` | connecteurs en segments droits, sans couloirs partagés | formalisme commun |
 | `together { … }` | maintient un groupe d'éléments sur un même axe | votre source |
 | `[norank]` sur un lien | dessine le lien sans le laisser imposer un rang | votre source |
+
+### Un cas ne reçoit pas deux flèches d'acteurs qui s'héritent
+
+La généralisation **donne déjà** à l'héritier les cas de son ancêtre. Lui redessiner une
+flèche vers l'un d'eux ajoute un trait qui ne dit rien, et fait recevoir au cas deux flèches là
+où une suffit. C'est une faute de notation, pas une question de goût.
+
+```plantuml
+Visiteur -- Consulter          ' le visiteur consulte
+Client -- Réserver             ' le client réserve, et consulte AUSSI
+Visiteur <|-[norank]- Client   ' …parce qu'il hérite, pas parce qu'on le redessine
+```
+
+La règle est appliquée des deux côtés :
+
+- **L'assistant ne l'écrit jamais.** Le formulaire est organisé par acteur : chacun porte la
+  liste de ses cas, et son ascendance. Un cas répété sous un héritier est retiré à la
+  génération, et un commentaire dans la source dit lequel et pourquoi. La chaîne est remontée
+  en entier : un cas tenu du grand-parent est tout aussi redondant.
+- **Les diagrammes déjà écrits sont vérifiés.** Une flèche redondante est signalée sous
+  l'aperçu, avec le numéro de ligne cliquable — le diagramme se génère, mais il porte un trait
+  de trop. La source n'est pas modifiée : la correction reste votre décision.
+
+Deux acteurs **sans lien d'héritage** peuvent en revanche exécuter le même cas : deux flèches
+vers un cas unique, c'est licite, et rien n'est signalé.
 
 ### La disposition imposée aux diagrammes de cas d'utilisation
 

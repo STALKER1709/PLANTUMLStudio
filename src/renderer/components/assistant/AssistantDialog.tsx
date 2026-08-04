@@ -6,7 +6,11 @@ import {
   initialValues,
   type SectionValues,
 } from '../../assistant/schemas';
-import { filledRows, type AssistantField, type AssistantSection } from '../../assistant/model';
+import {
+  referencedLabels,
+  type AssistantField,
+  type AssistantSection,
+} from '../../assistant/model';
 import { useTranslation } from '../../i18n';
 
 export interface AssistantDialogProps {
@@ -77,15 +81,9 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
     }));
   };
 
-  /** Libellés déjà déclarés dans une section, pour alimenter un champ lié. */
-  const choixDe = (sectionId: string | undefined): string[] => {
-    const section = schema.sections.find((candidat) => candidat.id === sectionId);
-    if (!section) return [];
-    const clef = section.fields[0]?.name ?? 'nom';
-    return filledRows(section, valeurs)
-      .map((row) => (row[clef] ?? '').trim())
-      .filter((libelle, rang, tout) => libelle !== '' && tout.indexOf(libelle) === rang);
-  };
+  /** Libellés déjà déclarés ailleurs dans le formulaire, pour un champ lié. */
+  const choixDe = (references: string | readonly string[] | undefined): string[] =>
+    referencedLabels(schema.sections, references, valeurs);
 
   return (
     <div
@@ -165,7 +163,7 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
 interface SectionEditorProps {
   section: AssistantSection;
   lignes: Array<Record<string, string>>;
-  choixDe(sectionId: string | undefined): string[];
+  choixDe(references: string | readonly string[] | undefined): string[];
   onChange(sectionId: string, index: number, champ: string, valeur: string): void;
   onAdd(sectionId: string): void;
   onRemove(sectionId: string, index: number): void;

@@ -78,6 +78,8 @@
 
   "errors.title": "Rendering error",
   "errors.gotoLine": "Line {line}",
+  "errors.warningsTitle": "To fix in the diagram",
+  "errors.redundantAssociation": "\"{actor}\" inherits from \"{ancestor}\": its arrow to \"{useCase}\" is redundant — inheritance already grants it.",
   "errors.unknown": "Unknown error.",
 
   "env.title": "Environment diagnostics",

@@ -11,12 +11,34 @@
 import {
   aliasesOf,
   filledRows,
+  listOf,
+  toAlias,
   joinLines,
   quoteLabel,
   wrap,
   type AssistantSchema,
   type Row,
 } from './model';
+
+/**
+ * Ancêtres d'un acteur, du plus proche au plus lointain.
+ *
+ * La garde contre les cycles n'est pas théorique : rien n'empêche de saisir
+ * « A hérite de B » et « B hérite de A » dans le formulaire.
+ */
+function ancetres(acteur: string, parent: ReadonlyMap<string, string>): string[] {
+  const chaine: string[] = [];
+  const vus = new Set<string>([acteur]);
+  let courant = parent.get(acteur);
+
+  while (courant !== undefined && !vus.has(courant)) {
+    chaine.push(courant);
+    vus.add(courant);
+    courant = parent.get(courant);
+  }
+
+  return chaine;
+}
 
 const casUtilisation: AssistantSchema = {
   id: '08-diagramme-cas-utilisation',
@@ -34,10 +56,10 @@ const casUtilisation: AssistantSchema = {
     },
     {
       id: 'acteurs',
-      label: 'Acteurs',
-      hint: 'Les acteurs principaux sont alignés à gauche ; les secondaires — services externes — se placent à droite.',
+      label: 'Acteurs et leurs cas d’utilisation',
+      hint: "Un acteur par ligne, avec tout ce qu'il fait dans le système — un cas par ligne. Ce qu'il hérite n'a pas à être répété : la généralisation le lui donne déjà.",
       fields: [
-        { name: 'nom', label: 'Nom', kind: 'text', required: true, placeholder: 'Client inscrit' },
+        { name: 'nom', label: 'Acteur', kind: 'text', required: true, placeholder: 'Client inscrit' },
         {
           name: 'role',
           label: 'Rôle',
@@ -47,39 +69,55 @@ const casUtilisation: AssistantSchema = {
             { value: 'secondaire', label: 'Secondaire (service externe)' },
           ],
         },
+        { name: 'herite', label: 'Hérite de', kind: 'reference', references: 'acteurs' },
+        {
+          name: 'cas',
+          label: "Cas d'utilisation",
+          kind: 'multiline',
+          placeholder: 'Réserver une prestation\nAnnuler une réservation',
+        },
       ],
       sample: [
-        { nom: 'Visiteur', role: 'principal' },
-        { nom: 'Client inscrit', role: 'principal' },
+        {
+          nom: 'Visiteur',
+          role: 'principal',
+          herite: '',
+          cas: 'Consulter le catalogue\nCréer un compte',
+        },
+        {
+          nom: 'Client inscrit',
+          role: 'principal',
+          herite: 'Visiteur',
+          cas: 'Réserver une prestation\nAnnuler une réservation',
+        },
+        {
+          nom: 'Service de paiement',
+          role: 'secondaire',
+          herite: '',
+          cas: 'Payer une réservation',
+        },
       ],
     },
     {
-      id: 'cas',
-      label: "Cas d'utilisation",
-      hint: 'Libellé à l’infinitif : « Réserver une prestation ».',
+      id: 'casInternes',
+      label: 'Cas sans acteur direct',
+      hint: "Ceux qu'aucun acteur ne déclenche lui-même : ils ne sont atteints que par « inclut » ou « étend ».",
       fields: [
-        { name: 'nom', label: 'Libellé', kind: 'text', required: true, placeholder: 'Réserver une prestation' },
+        { name: 'nom', label: 'Libellé', kind: 'text', required: true, placeholder: "S'authentifier" },
       ],
-      sample: [{ nom: 'Consulter le catalogue' }, { nom: 'Réserver une prestation' }],
-    },
-    {
-      id: 'associations',
-      label: 'Associations',
-      hint: 'Quel acteur participe à quel cas.',
-      fields: [
-        { name: 'acteur', label: 'Acteur', kind: 'reference', references: 'acteurs', required: true },
-        { name: 'cas', label: 'Cas', kind: 'reference', references: 'cas', required: true },
-      ],
-      sample: [
-        { acteur: 'Visiteur', cas: 'Consulter le catalogue' },
-        { acteur: 'Client inscrit', cas: 'Réserver une prestation' },
-      ],
+      sample: [{ nom: "S'authentifier" }],
     },
     {
       id: 'relationsCas',
       label: 'Relations entre cas',
       fields: [
-        { name: 'source', label: 'Cas', kind: 'reference', references: 'cas', required: true },
+        {
+          name: 'source',
+          label: 'Cas',
+          kind: 'reference',
+          references: ['acteurs.cas', 'casInternes'],
+          required: true,
+        },
         {
           name: 'type',
           label: 'Relation',
@@ -90,31 +128,58 @@ const casUtilisation: AssistantSchema = {
           ],
           required: true,
         },
-        { name: 'cible', label: 'Cas', kind: 'reference', references: 'cas', required: true },
+        {
+          name: 'cible',
+          label: 'Cas',
+          kind: 'reference',
+          references: ['acteurs.cas', 'casInternes'],
+          required: true,
+        },
       ],
-    },
-    {
-      id: 'generalisations',
-      label: 'Généralisations d’acteurs',
-      hint: 'Un acteur spécialise un autre : il en hérite les cas.',
-      fields: [
-        { name: 'enfant', label: 'Acteur', kind: 'reference', references: 'acteurs', required: true },
-        { name: 'parent', label: 'Hérite de', kind: 'reference', references: 'acteurs', required: true },
+      sample: [
+        { source: 'Réserver une prestation', type: 'include', cible: "S'authentifier" },
       ],
     },
   ],
   build(title, values) {
-    const pris = new Set<string>();
-    const aliasActeurs = aliasesOf(this.sections[1], values, pris);
-    const aliasCas = aliasesOf(this.sections[2], values, pris);
-
     const acteurs = filledRows(this.sections[1], values);
+
+    // Un cas cité par plusieurs acteurs reste UN cas : la table est indexée
+    // par libellé, et l'ordre de première apparition fixe celui du diagramme.
+    const pris = new Set<string>();
+    const aliasActeurs = new Map<string, string>();
+    acteurs.forEach((row) => {
+      const nom = row.nom.trim();
+      if (!aliasActeurs.has(nom)) aliasActeurs.set(nom, toAlias(nom, pris));
+    });
+
+    const aliasCas = new Map<string, string>();
+    const declarerCas = (libelle: string) => {
+      if (libelle !== '' && !aliasCas.has(libelle)) aliasCas.set(libelle, toAlias(libelle, pris));
+    };
+    acteurs.forEach((row) => listOf(row.cas).forEach(declarerCas));
+    filledRows(this.sections[2], values).forEach((row) => declarerCas(row.nom.trim()));
+
+    const parent = new Map<string, string>();
+    acteurs.forEach((row) => {
+      const herite = (row.herite ?? '').trim();
+      if (herite !== '' && herite !== row.nom.trim() && aliasActeurs.has(herite)) {
+        parent.set(row.nom.trim(), herite);
+      }
+    });
+
+    /** Cas cités par un acteur, indexés par acteur. */
+    const casParActeur = new Map<string, string[]>();
+    acteurs.forEach((row) => {
+      const nom = row.nom.trim();
+      casParActeur.set(nom, [...(casParActeur.get(nom) ?? []), ...listOf(row.cas)]);
+    });
+
     const principaux = acteurs.filter((row) => (row.role || 'principal') === 'principal');
     const secondaires = acteurs.filter((row) => row.role === 'secondaire');
 
     const declarer = (row: Row) =>
       `actor ${quoteLabel(row.nom)} as ${aliasActeurs.get(row.nom.trim())}`;
-
     // Un acteur secondaire est un système, pas une personne : la notation UML
     // le dessine en rectangle stéréotypé plutôt qu'en bonhomme filaire.
     const declarerSecondaire = (row: Row) =>
@@ -128,34 +193,56 @@ const casUtilisation: AssistantSchema = {
         : principaux.map(declarer);
 
     const systeme = filledRows(this.sections[0], values)[0];
-    const cas = filledRows(this.sections[2], values).map(
-      (row) => `  usecase ${quoteLabel(row.nom)} as ${aliasCas.get(row.nom.trim())}`
-    );
     const blocSysteme =
-      cas.length === 0
+      aliasCas.size === 0
         ? []
         : [
             `rectangle ${quoteLabel(systeme?.nom ?? 'Système')} {`,
-            ...cas,
+            ...Array.from(aliasCas.entries()).map(
+              ([libelle, alias]) => `  usecase ${quoteLabel(libelle)} as ${alias}`
+            ),
             '}',
           ];
 
     // Le sens d'écriture décide du côté : sous « left to right direction »,
-    // Graphviz place la cible d'une association à droite de sa source. Un
-    // acteur principal s'écrit donc à gauche du trait, un secondaire à droite.
+    // Graphviz place la cible d'une association à droite de sa source.
     const secondaire = new Set(secondaires.map((row) => row.nom.trim()));
-    const associations = filledRows(this.sections[3], values)
-      .map((row) => {
-        const acteur = aliasActeurs.get(row.acteur.trim());
-        const cible = aliasCas.get(row.cas.trim());
-        if (!acteur || !cible) return '';
-        return secondaire.has(row.acteur.trim())
-          ? `${cible} -- ${acteur}`
-          : `${acteur} -- ${cible}`;
-      })
-      .filter((ligne) => ligne !== '');
+    const associations: string[] = [];
+    const heritages: string[] = [];
 
-    const relations = filledRows(this.sections[4], values)
+    acteurs.forEach((row) => {
+      const nom = row.nom.trim();
+      const acteur = aliasActeurs.get(nom);
+      if (!acteur) return;
+
+      // Un cas déjà porté par un ancêtre ne se redessine pas : la
+      // généralisation le donne à l'héritier, et une seconde flèche vers le
+      // même cas serait une faute de notation.
+      const portesParUnAncetre = new Set(
+        ancetres(nom, parent).flatMap((ancetre) => casParActeur.get(ancetre) ?? [])
+      );
+      const herites: string[] = [];
+
+      listOf(row.cas).forEach((libelle) => {
+        const cible = aliasCas.get(libelle);
+        if (!cible) return;
+        if (portesParUnAncetre.has(libelle)) {
+          herites.push(libelle);
+          return;
+        }
+        associations.push(
+          secondaire.has(nom) ? `${cible} -- ${acteur}` : `${acteur} -- ${cible}`
+        );
+      });
+
+      if (herites.length > 0) {
+        heritages.push(
+          `' ${nom} hérite de ${parent.get(nom)} : ${herites.join(', ')} — déjà porté(s) par l'ancêtre.`
+        );
+      }
+    });
+
+    const relations = filledRows(this.sections[3], values)
       .map((row) => {
         const de = aliasCas.get(row.source.trim());
         const vers = aliasCas.get(row.cible.trim());
@@ -165,11 +252,11 @@ const casUtilisation: AssistantSchema = {
 
     // « [norank] » dessine la généralisation sans lui laisser imposer un rang :
     // sans cela, l'acteur parent sort de la colonne.
-    const generalisations = filledRows(this.sections[5], values)
-      .map((row) => {
-        const enfant = aliasActeurs.get(row.enfant.trim());
-        const parent = aliasActeurs.get(row.parent.trim());
-        return enfant && parent ? `${parent} <|-[norank]- ${enfant}` : '';
+    const generalisations = Array.from(parent.entries())
+      .map(([enfant, ancetre]) => {
+        const alias = aliasActeurs.get(enfant);
+        const aliasParent = aliasActeurs.get(ancetre);
+        return alias && aliasParent ? `${aliasParent} <|-[norank]- ${alias}` : '';
       })
       .filter((ligne) => ligne !== '');
 
@@ -182,7 +269,8 @@ const casUtilisation: AssistantSchema = {
         blocSysteme,
         associations,
         relations,
-        generalisations
+        generalisations,
+        heritages
       )
     );
   },

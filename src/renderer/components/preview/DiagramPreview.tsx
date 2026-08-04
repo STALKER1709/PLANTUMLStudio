@@ -11,7 +11,12 @@ import {
   type LayoutOffsets,
   type Point,
 } from '../../utils/diagramLayout';
-import { looksLikeUseCase, parseUseCaseDiagram } from '../../derive/parseUseCase';
+import {
+  labelOf,
+  looksLikeUseCase,
+  parseUseCaseDiagram,
+  redundantAssociations,
+} from '../../derive/parseUseCase';
 import { optimizeLayout, type OptimizeResult } from '../../utils/layoutOptimizer';
 import { arrangeUseCaseColumns } from '../../utils/useCaseLayout';
 import { readSvgSize, sanitizeSvg } from '../../utils/sanitizeSvg';
@@ -78,6 +83,27 @@ export function DiagramPreview({
   });
 
   const deplacements = Object.keys(layoutOffsets).length;
+
+  /**
+   * Fautes de notation repérées dans la source, qui n'empêchent pas le rendu.
+   *
+   * Aujourd'hui une seule : une flèche vers un cas qu'un ancêtre porte déjà.
+   * Le diagramme se génère, mais il porte un trait de trop.
+   */
+  const avertissements = useMemo(() => {
+    const modele = parseUseCaseDiagram(pumlSource);
+    if (!looksLikeUseCase(modele)) return [];
+
+    return redundantAssociations(modele).map((redondance) => ({
+      message: t('errors.redundantAssociation', {
+        actor: labelOf(modele, redondance.actor),
+        ancestor: labelOf(modele, redondance.ancestor),
+        useCase: labelOf(modele, redondance.useCase),
+      }),
+      line: redondance.line,
+      raw: `${redondance.actor} -- ${redondance.useCase}`,
+    }));
+  }, [pumlSource, t]);
 
   const [isOptimizing, setIsOptimizing] = useState(false);
 
@@ -271,7 +297,13 @@ export function DiagramPreview({
         )}
       </div>
 
-      {errors && errors.length > 0 && <ErrorPanel errors={errors} onGotoLine={onGotoLine} />}
+      {((errors && errors.length > 0) || avertissements.length > 0) && (
+        <ErrorPanel
+          errors={errors ?? []}
+          warnings={avertissements}
+          onGotoLine={onGotoLine}
+        />
+      )}
     </div>
   );
 }

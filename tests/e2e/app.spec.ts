@@ -401,23 +401,38 @@ test("l'assistant écrit un diagramme sans qu'on tape de PlantUML", async () => 
   });
   await dialogue.locator('.assistant-entete input').fill('Réservation en ligne');
 
-  // Un acteur ajouté à la main doit apparaître dans les listes liées : c'est
-  // ce qui évite d'avoir à retenir les noms déjà déclarés.
+  // Le formulaire est organisé par acteur : chacun porte ses propres cas.
+  await expect(dialogue.locator('.assistant-section legend')).toHaveText([
+    'Système',
+    'Acteurs et leurs cas d’utilisation',
+    'Cas sans acteur direct',
+    'Relations entre cas',
+  ]);
+
   const acteurs = dialogue.locator('.assistant-section', { hasText: 'Acteurs' }).first();
   await acteurs.getByRole('button', { name: /Ajouter/ }).click();
-  await acteurs.locator('.assistant-ligne').last().locator('input').fill('Administrateur');
+  const nouvelle = acteurs.locator('.assistant-ligne').last();
+  await nouvelle.locator('input').first().fill('Administrateur');
+  // Il hérite du visiteur ET répète l'un de ses cas : c'est ce que la règle
+  // doit rattraper.
+  await nouvelle.locator('select').nth(1).selectOption('Visiteur');
+  await nouvelle.locator('textarea').fill('Consulter le catalogue\nModérer les avis');
 
-  const associations = dialogue.locator('.assistant-section', { hasText: 'Associations' }).first();
-  const choix = associations.locator('.assistant-ligne').first().locator('select').first();
-  await expect(choix.locator('option', { hasText: 'Administrateur' })).toHaveCount(1);
-
-  // L'aperçu montre la source au fur et à mesure de la saisie.
   const apercu = dialogue.locator('.assistant-apercu pre');
   await expect(apercu).toContainText('title Réservation en ligne');
   await expect(apercu).toContainText('actor "Administrateur"');
   // Les recettes de disposition documentées sont écrites par l'assistant.
   await expect(apercu).toContainText('left to right direction');
   await expect(apercu).toContainText('together {');
+
+  const source = (await apercu.textContent()) ?? '';
+  // Le cas propre est relié…
+  expect(source).toContain('Administrateur -- Moderer_les_avis');
+  // …mais pas celui que la généralisation lui donne déjà.
+  expect(source, 'la flèche héritée n’est pas redessinée').not.toContain(
+    'Administrateur -- Consulter_le_catalogue'
+  );
+  expect(source).toContain('Visiteur -- Consulter_le_catalogue');
 
   await dialogue.locator('button', { hasText: /^Créer le diagramme$/ }).click();
   await expect(dialogue).toHaveCount(0);
@@ -427,6 +442,38 @@ test("l'assistant écrit un diagramme sans qu'on tape de PlantUML", async () => 
     timeout: 30_000,
   });
   await expect(window.locator('.error-panel')).toHaveCount(0);
+});
+
+test('une flèche rendue redondante par un héritage est signalée', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    [
+      '@startuml',
+      'actor "Visiteur" as V',
+      'actor "Client" as C',
+      'usecase "Consulter" as UC',
+      'V -- UC',
+      'C -- UC',
+      'V <|-- C',
+      '@enduml',
+    ].join('\n')
+  );
+
+  // Le diagramme se génère : ce n'est pas une erreur de syntaxe, mais une
+  // faute de notation.
+  const panneau = window.locator('.error-panel');
+  await expect(panneau).toBeVisible({ timeout: 20_000 });
+  await expect(panneau).toContainText('À corriger dans le diagramme');
+  await expect(panneau).toContainText('redondante');
+  // La ligne fautive est celle de la flèche, et elle est cliquable.
+  await expect(panneau.locator('.error-line-link')).toHaveText('Ligne 6');
+  await expect(window.locator('.preview-stage svg')).toBeVisible();
 });
 
 test('la dérivation produit les autres diagrammes depuis les cas d’utilisation', async () => {

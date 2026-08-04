@@ -92,6 +92,10 @@ rectangle "Plateforme de réservation" {
 }
 
 ' Association : trait simple reliant un acteur à un cas d'utilisation.
+' UN CAS NE REÇOIT PAS DEUX FLÈCHES D'ACTEURS QUI S'HÉRITENT. « Client
+' inscrit » hérite du visiteur : les cas du visiteur sont déjà les siens, les
+' lui relier une seconde fois serait une faute de notation. Ci-dessous, il
+' n'est relié qu'aux cas qui lui sont propres.
 ' Le SENS D'ÉCRITURE décide du côté : sous « left to right direction »,
 ' Graphviz place la cible d'une association à droite de sa source. Un acteur
 ' principal s'écrit donc à gauche du trait — « acteur -- cas » —, un acteur

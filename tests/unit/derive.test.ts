@@ -15,6 +15,7 @@ import {
   labelOf,
   looksLikeUseCase,
   parseUseCaseDiagram,
+  redundantAssociations,
 } from '../../src/renderer/derive/parseUseCase';
 
 const ROOT = path.resolve(__dirname, '../..');
@@ -243,18 +244,23 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des dérivations', () => {
     const source = schema.build('Réservation', {
       systeme: [{ nom: 'Plateforme de réservation' }],
       acteurs: [
-        { nom: 'Visiteur', role: 'principal' },
-        { nom: 'Client inscrit', role: 'principal' },
+        {
+          nom: 'Visiteur',
+          role: 'principal',
+          herite: '',
+          cas: 'Consulter le catalogue',
+        },
+        {
+          nom: 'Client inscrit',
+          role: 'principal',
+          herite: 'Visiteur',
+          cas: 'Réserver une prestation',
+        },
       ],
-      cas: [{ nom: 'Consulter le catalogue' }, { nom: 'Réserver une prestation' }],
-      associations: [
-        { acteur: 'Visiteur', cas: 'Consulter le catalogue' },
-        { acteur: 'Client inscrit', cas: 'Réserver une prestation' },
-      ],
+      casInternes: [],
       relationsCas: [
         { source: 'Réserver une prestation', type: 'include', cible: 'Consulter le catalogue' },
       ],
-      generalisations: [{ enfant: 'Client inscrit', parent: 'Visiteur' }],
     });
 
     const relu = parseUseCaseDiagram(source);
@@ -267,5 +273,100 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des dérivations', () => {
     deriveAll(relu).forEach((derivation) => {
       expect(erreurDeRendu(derivation.source), `${derivation.label}\n${derivation.source}`).toBeNull();
     });
+  });
+});
+
+describe('Flèches rendues redondantes par un héritage', () => {
+  it('repère la flèche que la généralisation donne déjà', () => {
+    const model = parseUseCaseDiagram(`
+@startuml
+actor "Visiteur" as V
+actor "Client" as C
+usecase "Consulter" as UC
+V -- UC
+C -- UC
+V <|-- C
+@enduml
+`);
+
+    const redondances = redundantAssociations(model);
+
+    expect(redondances).toHaveLength(1);
+    expect(redondances[0].actor).toBe('C');
+    expect(redondances[0].ancestor).toBe('V');
+    expect(redondances[0].useCase).toBe('UC');
+    // La ligne est celle de la flèche fautive — « C -- UC », septième ligne
+    // de la source ci-dessus — pour la rendre cliquable dans l'éditeur.
+    expect(redondances[0].line).toBe(7);
+  });
+
+  it('remonte au-delà du parent direct', () => {
+    const model = parseUseCaseDiagram(`
+@startuml
+actor V
+actor C
+actor P
+usecase "Consulter" as UC
+V -- UC
+P -- UC
+V <|-- C
+C <|-- P
+@enduml
+`);
+
+    // P hérite de C qui hérite de V : la flèche de P est redondante.
+    expect(redundantAssociations(model)).toHaveLength(1);
+    expect(redundantAssociations(model)[0].ancestor).toBe('V');
+  });
+
+  it('ne signale rien entre acteurs sans lien d’héritage', () => {
+    const model = parseUseCaseDiagram(`
+@startuml
+actor Client
+actor Agent
+usecase "Consulter" as UC
+Client -- UC
+Agent -- UC
+@enduml
+`);
+
+    // Deux acteurs indépendants peuvent partager un cas : c'est licite.
+    expect(redundantAssociations(model)).toEqual([]);
+  });
+
+  it('ne boucle pas sur un héritage circulaire', () => {
+    const model = parseUseCaseDiagram(`
+@startuml
+actor A
+actor B
+usecase "Faire" as UC
+A -- UC
+B -- UC
+A <|-- B
+B <|-- A
+@enduml
+`);
+
+    // La source est incohérente ; la détection doit rendre la main.
+    expect(redundantAssociations(model).length).toBeGreaterThan(0);
+  });
+
+  it('ne signale rien sur ce que l’assistant produit', () => {
+    const schema = schemaById('08-diagramme-cas-utilisation');
+    if (!schema) throw new Error('schéma introuvable');
+
+    // L'utilisateur répète le cas hérité ; l'assistant doit l'avoir retiré,
+    // donc la relecture ne doit plus rien trouver.
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [
+        { nom: 'Visiteur', role: 'principal', herite: '', cas: 'Consulter' },
+        { nom: 'Client', role: 'principal', herite: 'Visiteur', cas: 'Consulter\nRéserver' },
+      ],
+      casInternes: [],
+      relationsCas: [],
+    });
+
+    expect(redundantAssociations(parseUseCaseDiagram(source))).toEqual([]);
   });
 });

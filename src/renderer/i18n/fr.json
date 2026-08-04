@@ -78,6 +78,8 @@
 
   "errors.title": "Erreur de génération",
   "errors.gotoLine": "Ligne {line}",
+  "errors.warningsTitle": "À corriger dans le diagramme",
+  "errors.redundantAssociation": "« {actor} » hérite de « {ancestor} » : sa flèche vers « {useCase} » est redondante, l'héritage la lui donne déjà.",
   "errors.unknown": "Erreur inconnue.",
 
   "env.title": "Diagnostic de l'environnement",

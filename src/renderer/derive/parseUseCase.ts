@@ -30,8 +30,8 @@ export interface UseCaseModel {
   system: string;
   actors: UseCaseActor[];
   useCases: UseCaseActor[];
-  /** Associations acteur ↔ cas. */
-  associations: Array<{ actor: string; useCase: string }>;
+  /** Associations acteur ↔ cas, avec la ligne où elles sont écrites. */
+  associations: Array<{ actor: string; useCase: string; line?: number }>;
   /** `A ..> B : <<include>>` — A appelle toujours B. */
   includes: Array<{ from: string; to: string }>;
   /** `A ..> B : <<extend>>` — A complète parfois B. */
@@ -53,12 +53,18 @@ export function emptyModel(): UseCaseModel {
   };
 }
 
-/** Retire les commentaires et les directives qui ne portent pas de structure. */
-function significantLines(source: string): string[] {
+/**
+ * Retire les commentaires et les directives qui ne portent pas de structure,
+ * en conservant le numéro de ligne d'origine — c'est lui qui rend le
+ * signalement d'une redondance cliquable dans l'éditeur.
+ */
+function significantLines(source: string): Array<{ texte: string; numero: number }> {
   return source
     .split(/\r?\n/)
-    .map((ligne) => ligne.trim())
-    .filter((ligne) => ligne !== '' && !ligne.startsWith("'") && !ligne.startsWith('/'));
+    .map((ligne, index) => ({ texte: ligne.trim(), numero: index + 1 }))
+    .filter(
+      ({ texte }) => texte !== '' && !texte.startsWith("'") && !texte.startsWith('/')
+    );
 }
 
 /**
@@ -143,7 +149,7 @@ export function parseUseCaseDiagram(source: string): UseCaseModel {
     if (acteur && acteur.side !== 'secondary') acteur.side = 'secondary';
   };
 
-  significantLines(source).forEach((ligne) => {
+  significantLines(source).forEach(({ texte: ligne, numero }) => {
     if (/^@(start|end)uml/i.test(ligne)) return;
 
     const titre = ligne.match(/^title\s+(.+)$/i);
@@ -219,9 +225,9 @@ export function parseUseCaseDiagram(source: string): UseCaseModel {
     // Association acteur ↔ cas. Le sens d'écriture porte le côté : à gauche du
     // trait l'acteur est principal, à droite il est secondaire.
     if (deGauche.kind === 'actor' && deDroite.kind === 'usecase') {
-      model.associations.push({ actor: deGauche.id, useCase: deDroite.id });
+      model.associations.push({ actor: deGauche.id, useCase: deDroite.id, line: numero });
     } else if (deGauche.kind === 'usecase' && deDroite.kind === 'actor') {
-      model.associations.push({ actor: deDroite.id, useCase: deGauche.id });
+      model.associations.push({ actor: deDroite.id, useCase: deGauche.id, line: numero });
       marquerSecondaire(deDroite.id);
     }
     // Une pointe simple entre deux cas sans stéréotype n'a pas de sens UML
@@ -268,4 +274,55 @@ export function actorsOf(model: UseCaseModel, useCaseId: string): string[] {
   }
 
   return Array.from(tous);
+}
+
+/**
+ * Associations rendues redondantes par une généralisation.
+ *
+ * Un acteur hérite des cas de celui dont il descend : lui redessiner une
+ * flèche vers un cas déjà porté par un ancêtre ajoute un trait qui ne dit
+ * rien, et fait recevoir au cas deux flèches là où une suffit. C'est une
+ * faute de notation, pas une question de goût.
+ *
+ * La chaîne d'ascendance est parcourue en entier — un cas hérité du
+ * grand-parent est aussi redondant — avec une garde contre les cycles, qu'une
+ * source écrite à la main peut parfaitement contenir.
+ */
+export function redundantAssociations(
+  model: UseCaseModel
+): Array<{ actor: string; ancestor: string; useCase: string; line?: number }> {
+  const parents = new Map<string, string[]>();
+  model.generalizations.forEach(({ child, parent }) => {
+    parents.set(child, [...(parents.get(child) ?? []), parent]);
+  });
+
+  /** Tous les ascendants d'un acteur, héritage multiple compris. */
+  const ascendance = (acteur: string): string[] => {
+    const trouves: string[] = [];
+    const vus = new Set<string>([acteur]);
+    const aVoir = [...(parents.get(acteur) ?? [])];
+
+    while (aVoir.length > 0) {
+      const courant = aVoir.shift() as string;
+      if (vus.has(courant)) continue;
+      vus.add(courant);
+      trouves.push(courant);
+      aVoir.push(...(parents.get(courant) ?? []));
+    }
+
+    return trouves;
+  };
+
+  const casDe = new Map<string, Set<string>>();
+  model.associations.forEach(({ actor, useCase }) => {
+    casDe.set(actor, (casDe.get(actor) ?? new Set()).add(useCase));
+  });
+
+  const redondances: Array<{ actor: string; ancestor: string; useCase: string; line?: number }> = [];
+  model.associations.forEach(({ actor, useCase, line }) => {
+    const ancetre = ascendance(actor).find((candidat) => casDe.get(candidat)?.has(useCase));
+    if (ancetre !== undefined) redondances.push({ actor, ancestor: ancetre, useCase, line });
+  });
+
+  return redondances;
 }

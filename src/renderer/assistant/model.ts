@@ -28,8 +28,15 @@ export interface AssistantField {
   kind: FieldKind;
   /** Valeurs proposées, pour un champ `choice`. */
   options?: ReadonlyArray<{ value: string; label: string }>;
-  /** Section dont les lignes alimentent la liste, pour un champ `reference`. */
-  references?: string;
+  /**
+   * D'où viennent les valeurs proposées, pour un champ `reference`.
+   *
+   * Chaque entrée désigne une section (`"acteurs"`) ou un champ précis d'une
+   * section (`"acteurs.cas"`). Un champ multiligne est éclaté en autant de
+   * valeurs que de lignes : c'est ce qui permet de citer un cas d'utilisation
+   * saisi dans la liste d'un acteur.
+   */
+  references?: string | readonly string[];
   placeholder?: string;
   /** Sans cette valeur, la ligne est ignorée à la génération. */
   required?: boolean;
@@ -132,6 +139,40 @@ export function aliasesOf(
   });
 
   return table;
+}
+
+/**
+ * Valeurs proposées par un champ lié.
+ *
+ * Les doublons sont écartés : deux acteurs peuvent citer le même cas, il n'y
+ * a qu'un cas.
+ */
+export function referencedLabels(
+  sections: ReadonlyArray<AssistantSection>,
+  references: string | readonly string[] | undefined,
+  values: SectionValues
+): string[] {
+  if (references === undefined) return [];
+  const specs = typeof references === 'string' ? [references] : references;
+  const libelles: string[] = [];
+
+  specs.forEach((spec) => {
+    const [sectionId, fieldName] = spec.split('.');
+    const section = sections.find((candidat) => candidat.id === sectionId);
+    if (!section) return;
+
+    const champ = fieldName ?? section.fields[0]?.name ?? 'nom';
+    const multiligne = section.fields.find((f) => f.name === champ)?.kind === 'multiline';
+
+    filledRows(section, values).forEach((row) => {
+      const brut = row[champ] ?? '';
+      (multiligne ? listOf(brut) : [brut.trim()]).forEach((libelle) => {
+        if (libelle !== '' && !libelles.includes(libelle)) libelles.push(libelle);
+      });
+    });
+  });
+
+  return libelles;
 }
 
 /** Assemble les lignes d'une source en ignorant les blocs vides. */
