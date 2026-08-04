@@ -100,7 +100,7 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
           <label>
             {t('assistant.type')}
             <select value={schemaId} onChange={(event) => changerDeType(event.target.value)}>
-              {(['structurel', 'comportemental'] as const).map((famille) => (
+              {(['structurel', 'comportemental', 'planification'] as const).map((famille) => (
                 <optgroup key={famille} label={t(`template.category.${famille}`)}>
                   {SCHEMAS.filter((candidat) => candidat.category === famille).map((candidat) => (
                     <option key={candidat.id} value={candidat.id}>

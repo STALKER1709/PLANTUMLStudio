@@ -27,6 +27,18 @@ const UML_DIAGRAMS = [
   { id: '12-diagramme-etats-transitions', category: 'comportemental' },
   { id: '13-diagramme-temps', category: 'comportemental' },
   { id: '14-diagramme-vue-ensemble-interactions', category: 'comportemental' },
+];
+
+/**
+ * Ce qui est livré en plus de la norme.
+ *
+ * Le Gantt n'est pas un diagramme UML : il a sa propre syntaxe, et le
+ * formalisme commun ne s'y applique qu'en partie — un Gantt n'a ni élément ni
+ * flèche à colorer. Il est donc éprouvé à part plutôt que d'affaiblir les
+ * vérifications qui portent sur les quatorze.
+ */
+const AUTRES_MODELES = [
+  { id: '15-diagramme-gantt', category: 'planification' },
 ] as const;
 
 describe('TemplateService', () => {
@@ -94,12 +106,13 @@ describe('TemplateService', () => {
 });
 
 describe('Modèles livrés', () => {
-  it('couvre les 14 diagrammes UML, correctement classés', async () => {
+  it('couvre les 14 diagrammes UML et le Gantt, correctement classés', async () => {
     const templates = await new TemplateService(REPO_TEMPLATES).listTemplates();
+    const attendus = [...UML_DIAGRAMS, ...AUTRES_MODELES];
 
-    expect(templates.map((template) => template.id)).toEqual(UML_DIAGRAMS.map((d) => d.id));
+    expect(templates.map((template) => template.id)).toEqual(attendus.map((d) => d.id));
 
-    for (const expected of UML_DIAGRAMS) {
+    for (const expected of attendus) {
       const template = templates.find((candidate) => candidate.id === expected.id);
       expect(template?.category, expected.id).toBe(expected.category);
       expect(template?.label, expected.id).toMatch(/\S/);
@@ -122,19 +135,41 @@ describe('Modèles livrés', () => {
       expect(source, id).toMatch(/@end\w+/);
     }
   });
+
+  it('encadre le Gantt par ses propres balises, et le dit', async () => {
+    const source = await fsp.readFile(
+      path.join(REPO_TEMPLATES, '15-diagramme-gantt.puml'),
+      'utf-8'
+    );
+
+    expect(source).toContain("' @categorie planification");
+    expect(source).toContain('@startgantt');
+    expect(source).toContain('@endgantt');
+    // Aucune *ligne* n'ouvre un diagramme UML — le commentaire d'en-tête, lui,
+    // a le droit de citer « @startuml » pour expliquer la différence.
+    const ouvertures = source
+      .split('\n')
+      .filter((ligne) => /^\s*@startuml/.test(ligne));
+    expect(ouvertures).toEqual([]);
+    // La police commune reste reprise : c'est la part du formalisme qui
+    // s'applique encore.
+    expect(source).toContain('FontName "Segoe UI"');
+    // Le modèle avertit lui-même que le Gantt n'est pas de l'UML.
+    expect(source).toMatch(/ne fait PAS partie d'UML/i);
+  });
 });
 
 // Le rendu réel exige Java et plantuml.jar : la suite reste exécutable sans eux.
 describe.skipIf(!fs.existsSync(JAR))('Rendu des modèles livrés', () => {
   it(
-    'génère les 14 diagrammes sans erreur',
+    'génère les 14 diagrammes et le Gantt sans erreur',
     { timeout: 180_000 },
     async () => {
       const service = new PlantUMLService({
         resourcesPath: path.resolve(__dirname, '../../resources'),
       });
 
-      for (const { id } of UML_DIAGRAMS) {
+      for (const { id } of [...UML_DIAGRAMS, ...AUTRES_MODELES]) {
         const source = await fsp.readFile(path.join(REPO_TEMPLATES, `${id}.puml`), 'utf-8');
         const result = await service.render(source, 'svg');
 

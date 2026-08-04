@@ -101,14 +101,20 @@ export interface ExportResult {
   errors?: PlantUMLError[];
 }
 
-/** Les 14 diagrammes UML 2.5 se répartissent en deux familles. */
-export type DiagramCategory = 'structurel' | 'comportemental';
+/**
+ * Familles de diagrammes proposées.
+ *
+ * Les 14 diagrammes UML 2.5 se répartissent en deux familles. La troisième,
+ * « planification », ne relève pas d'UML : elle accueille le Gantt, que
+ * PlantUML sait produire avec une syntaxe propre.
+ */
+export type DiagramCategory = 'structurel' | 'comportemental' | 'planification';
 
 export interface TemplateSummary {
   id: string;
   /** Libellé affiché dans le sélecteur de diagramme. */
   label: string;
-  /** Famille UML, déclarée par « ' @categorie … » en tête de modèle. */
+  /** Famille, déclarée par « ' @categorie … » en tête de modèle. */
   category: DiagramCategory;
   fileName: string;
 }

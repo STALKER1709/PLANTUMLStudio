@@ -102,11 +102,13 @@ describe('Assemblage des sources', () => {
   });
 });
 
-describe('Couverture des 14 diagrammes', () => {
+describe('Couverture des diagrammes proposés', () => {
   it('propose un schéma par modèle livré', () => {
-    expect(SCHEMAS).toHaveLength(14);
+    // Les 14 de la norme UML 2.5, plus le Gantt, qui n'en fait pas partie.
+    expect(SCHEMAS).toHaveLength(15);
     expect(SCHEMAS.filter((schema) => schema.category === 'structurel')).toHaveLength(7);
     expect(SCHEMAS.filter((schema) => schema.category === 'comportemental')).toHaveLength(7);
+    expect(SCHEMAS.filter((schema) => schema.category === 'planification')).toHaveLength(1);
   });
 
   it('donne à chaque schéma des sections et des champs nommés', () => {
@@ -145,8 +147,14 @@ describe('Couverture des 14 diagrammes', () => {
       schema.sections.forEach((section) => (vide[section.id] = []));
       const source = schema.build('', vide);
 
-      expect(source.startsWith('@startuml'), schema.label).toBe(true);
-      expect(source.trimEnd().endsWith('@enduml'), schema.label).toBe(true);
+      // Le Gantt s'encadre par @startgantt : il n'est pas écrit en UML.
+      const [ouverture, fermeture] =
+        schema.category === 'planification'
+          ? ['@startgantt', '@endgantt']
+          : ['@startuml', '@enduml'];
+
+      expect(source.startsWith(ouverture), schema.label).toBe(true);
+      expect(source.trimEnd().endsWith(fermeture), schema.label).toBe(true);
     });
   });
 });
@@ -322,5 +330,143 @@ describe('Héritage : pas deux flèches vers le même cas', () => {
     // Aucun acteur ne le déclenche : il n'a pas d'association.
     expect(source).not.toMatch(/^\w+ -- S_authentifier$/m);
     expect(source).toContain('..> S_authentifier : <<include>>');
+  });
+});
+
+describe('Diagramme de Gantt', () => {
+  const schema = schemaById('15-diagramme-gantt');
+  if (!schema) throw new Error('schéma introuvable');
+
+  /** Formulaire minimal : deux tâches enchaînées. */
+  const deuxTaches = {
+    projet: [{ nom: 'Refonte', debut: '2026-09-01', echelle: 'weekly' }],
+    taches: [
+      { nom: 'Cadrage', phase: '', duree: '10', apres: '', avancement: '' },
+      { nom: 'Conception', phase: '', duree: '15', apres: 'Cadrage', avancement: '' },
+    ],
+    jalons: [],
+    fermetures: [],
+  };
+
+  it('encadre par @startgantt et non par @startuml', () => {
+    const source = schema.build('', deuxTaches);
+
+    expect(source.startsWith('@startgantt')).toBe(true);
+    expect(source.trimEnd().endsWith('@endgantt')).toBe(true);
+    expect(source).not.toContain('@startuml');
+  });
+
+  it('pose le cadre temporel avant les tâches', () => {
+    const source = schema.build('Refonte', deuxTaches);
+
+    expect(source).toContain('Project starts 2026-09-01');
+    expect(source).toContain('projectscale weekly');
+    // « language fr » francise les noms de mois affichés sur l'axe.
+    expect(source).toContain('language fr');
+    expect(source.indexOf('Project starts')).toBeLessThan(source.indexOf('[Cadrage]'));
+  });
+
+  it('enchaîne une tâche à la fin de la précédente', () => {
+    const source = schema.build('', deuxTaches);
+
+    expect(source).toContain('[Cadrage] lasts 10 days');
+    expect(source).toContain("[Conception] starts at [Cadrage]'s end");
+    // Sans « commence après », la tâche démarre au début du projet.
+    expect(source).not.toContain("[Cadrage] starts at");
+  });
+
+  it('n’enchaîne pas une tâche à elle-même', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      taches: [{ nom: 'Cadrage', phase: '', duree: '10', apres: 'Cadrage', avancement: '' }],
+    });
+
+    expect(source).not.toContain("[Cadrage] starts at [Cadrage]'s end");
+  });
+
+  it('n’ouvre un intertitre qu’au changement de phase', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      taches: [
+        { nom: 'A', phase: 'Étude', duree: '5', apres: '', avancement: '' },
+        { nom: 'B', phase: 'Étude', duree: '5', apres: '', avancement: '' },
+        { nom: 'C', phase: 'Construction', duree: '5', apres: '', avancement: '' },
+      ],
+    });
+
+    expect(source.match(/^-- .+ --$/gm)).toEqual(['-- Étude --', '-- Construction --']);
+  });
+
+  it('traduit les jours français en mots-clefs PlantUML', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      fermetures: [{ jour: 'samedi' }, { jour: 'Dimanche' }, { jour: '2026-12-25' }],
+    });
+
+    expect(source).toContain('saturday are closed');
+    expect(source).toContain('sunday are closed');
+    expect(source).toContain('2026-12-25 is closed');
+  });
+
+  it('ignore une fermeture qu’il ne sait pas traduire', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      fermetures: [{ jour: 'le pont de mai' }],
+    });
+
+    // Mieux vaut ne rien écrire qu'une ligne que PlantUML refusera.
+    expect(source).not.toContain('pont de mai');
+  });
+
+  it('pose un jalon à la fin d’une tâche', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      jalons: [{ nom: 'Mise en production', apres: 'Conception' }],
+    });
+
+    expect(source).toContain("[Mise en production] happens at [Conception]'s end");
+  });
+
+  it('borne l’avancement et l’omet quand il est nul', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      taches: [
+        { nom: 'A', phase: '', duree: '5', apres: '', avancement: '0' },
+        { nom: 'B', phase: '', duree: '5', apres: '', avancement: '250' },
+        { nom: 'C', phase: '', duree: '5', apres: '', avancement: '40 %' },
+      ],
+    });
+
+    expect(source).not.toContain('[A] is');
+    expect(source).toContain('[B] is 100% completed');
+    expect(source).toContain('[C] is 40% completed');
+  });
+
+  it('tire un nombre de jours d’une durée écrite en toutes lettres', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      taches: [{ nom: 'A', phase: '', duree: '12 jours', apres: '', avancement: '' }],
+    });
+
+    expect(source).toContain('[A] lasts 12 days');
+  });
+
+  it('neutralise les crochets d’un nom de tâche', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      taches: [{ nom: 'Étude [phase 1]', phase: '', duree: '5', apres: '', avancement: '' }],
+    });
+
+    // Un crochet fermerait la référence au milieu.
+    expect(source).toContain('[Étude phase 1] lasts 5 days');
+  });
+
+  it('ignore une tâche sans durée, faute de champ requis', () => {
+    const source = schema.build('', {
+      ...deuxTaches,
+      taches: [{ nom: 'Sans durée', phase: '', duree: '', apres: '', avancement: '' }],
+    });
+
+    expect(source).not.toContain('Sans durée');
   });
 });

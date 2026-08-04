@@ -444,6 +444,56 @@ test("l'assistant écrit un diagramme sans qu'on tape de PlantUML", async () => 
   await expect(window.locator('.error-panel')).toHaveCount(0);
 });
 
+test('le Gantt se compose au formulaire et se génère', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
+  await window.locator('button', { hasText: /^Assistant$/ }).click();
+
+  const dialogue = window.locator('.dialog.assistant');
+  await expect(dialogue).toBeVisible();
+
+  await dialogue.locator('.assistant-entete select').selectOption({
+    label: 'Diagramme de Gantt',
+  });
+  await dialogue.locator('.assistant-entete input').fill('Planning de la refonte');
+
+  await expect(dialogue.locator('.assistant-section legend')).toHaveText([
+    'Projet',
+    'Tâches',
+    'Jalons',
+    'Jours non travaillés',
+  ]);
+
+  // Une tâche ajoutée s'enchaîne à la fin d'une autre, choisie dans la liste.
+  const taches = dialogue.locator('.assistant-section', { hasText: 'Tâches' }).first();
+  await taches.getByRole('button', { name: /Ajouter/ }).click();
+  const nouvelle = taches.locator('.assistant-ligne').last();
+  await nouvelle.locator('input').nth(0).fill('Bascule');
+  await nouvelle.locator('input').nth(2).fill('4');
+  await nouvelle.locator('select').selectOption('Recette');
+
+  const apercu = dialogue.locator('.assistant-apercu pre');
+  const source = (await apercu.textContent()) ?? '';
+
+  // Le Gantt a ses propres balises : ce n'est pas de l'UML.
+  expect(source.startsWith('@startgantt')).toBe(true);
+  expect(source).not.toContain('@startuml');
+  expect(source).toContain('title Planning de la refonte');
+  expect(source).toContain('Project starts 2026-09-01');
+  expect(source).toContain("[Bascule] starts at [Recette]'s end");
+  // Le formulaire est en français, la syntaxe produite est anglaise.
+  expect(source).toContain('saturday are closed');
+
+  await dialogue.locator('button', { hasText: /^Créer le diagramme$/ }).click();
+  await expect(dialogue).toHaveCount(0);
+
+  // Le moteur le rend comme n'importe quel autre diagramme.
+  await expect(window.locator('.preview-stage svg')).toBeVisible({ timeout: 30_000 });
+  await expect(window.locator('.preview-stage svg')).toContainText('Bascule');
+  await expect(window.locator('.error-panel')).toHaveCount(0);
+});
+
 test('une flèche rendue redondante par un héritage est signalée', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
 

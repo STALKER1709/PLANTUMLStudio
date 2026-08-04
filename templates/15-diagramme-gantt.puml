@@ -1,0 +1,68 @@
+' Diagramme de Gantt — planification des tâches dans le temps
+' @categorie planification
+'
+' ATTENTION : le Gantt ne fait PAS partie d'UML. Il ne figure pas parmi les
+' quatorze diagrammes de la norme 2.5 ; PlantUML le produit avec une syntaxe
+' qui lui est propre, et c'est à ce titre qu'il est livré ici.
+'
+' Deux différences avec les autres modèles :
+'   — l'encadrement est @startgantt / @endgantt, et non @startuml ;
+'   — les mots-clefs sont anglais (lasts, starts at, are closed), même si
+'     « language fr » francise les noms de mois et de jours affichés.
+@startgantt
+language fr
+title Refonte du portail — planning prévisionnel
+
+' Le formalisme commun ne s'applique ici qu'en partie : un Gantt n'a ni
+' « element » ni « arrow ». Seuls la police et le fond sont repris ; les
+' couleurs des tâches se donnent une par une, avec « is colored in ».
+<style>
+root {
+  FontName "Segoe UI"
+  FontSize 12
+  BackGroundColor #FFFFFF
+}
+</style>
+
+' ── Cadre temporel ───────────────────────────────────────────────────
+' La date d'ancrage s'écrit AAAA-MM-JJ. L'échelle change la graduation de
+' l'axe : daily, weekly ou monthly.
+Project starts 2026-09-01
+projectscale weekly
+
+' ── Phases ───────────────────────────────────────────────────────────
+' « -- Titre -- » ouvre un intertitre qui regroupe les tâches suivantes.
+-- Étude --
+
+' Une tâche se déclare par sa durée. Sans « starts at », elle commence au
+' premier jour du projet.
+[Cadrage] lasts 10 days
+[Cadrage] is 100% completed
+[Cadrage] is colored in #D9F6FB/#1E90FF
+
+' L'enchaînement se lit « commence à la fin de » : c'est lui qui construit
+' le chemin, plutôt que des dates saisies une à une.
+[Conception] lasts 15 days
+[Conception] starts at [Cadrage]'s end
+[Conception] is 40% completed
+
+-- Construction --
+
+[Réalisation] lasts 30 days
+[Réalisation] starts at [Conception]'s end
+
+[Recette] lasts 10 days
+[Recette] starts at [Réalisation]'s end
+
+' ── Jalon ────────────────────────────────────────────────────────────
+' Un jalon n'a pas de durée : il marque un point de contrôle, ici la fin
+' de la recette.
+[Mise en production] happens at [Recette]'s end
+
+' ── Jours non travaillés ─────────────────────────────────────────────
+' Les jours fermés sont retirés du calcul : une tâche de 10 jours posée un
+' jeudi finit le jeudi suivant, week-ends déduits.
+saturday are closed
+sunday are closed
+2026-12-25 is closed
+@endgantt

@@ -51,7 +51,7 @@ export function DiagramTypeSelector({ isDirty, onInsert }: DiagramTypeSelectorPr
 
         {/* Les 14 diagrammes UML se rangent en deux familles : les regrouper
             évite une liste plate de 14 entrées difficile à parcourir. */}
-        {(['structurel', 'comportemental'] as const).map((category) => {
+        {(['structurel', 'comportemental', 'planification'] as const).map((category) => {
           const group = items.filter((template) => template.category === category);
           if (group.length === 0) return null;
 

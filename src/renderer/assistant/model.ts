@@ -62,7 +62,7 @@ export interface AssistantSchema {
   /** Identifiant du modèle correspondant, pour retrouver la même famille. */
   id: string;
   label: string;
-  category: 'structurel' | 'comportemental';
+  category: 'structurel' | 'comportemental' | 'planification';
   sections: ReadonlyArray<AssistantSection>;
   /** Produit la source PlantUML à partir du titre et des lignes saisies. */
   build(title: string, values: SectionValues): string;

@@ -76,7 +76,10 @@ export class TemplateService {
         const declaredCategory = comment.match(/^@categorie\s+(\w+)/i);
 
         if (declaredCategory) {
-          if (declaredCategory[1].toLowerCase() === 'comportemental') category = 'comportemental';
+          const declaree = declaredCategory[1].toLowerCase();
+          if (declaree === 'comportemental' || declaree === 'planification') {
+            category = declaree;
+          }
           continue;
         }
 

@@ -1,11 +1,16 @@
 import type { AssistantSchema, SectionValues } from './model';
 import { SCHEMAS_COMPORTEMENTAUX } from './schemasComportementaux';
+import { SCHEMAS_PROJET } from './schemasProjet';
 import { SCHEMAS_STRUCTURELS } from './schemasStructurels';
 
-/** Les 14 diagrammes UML 2.5, dans l'ordre des modèles livrés. */
+/**
+ * Les diagrammes proposés, dans l'ordre des modèles livrés : les 14 de la
+ * norme UML 2.5, puis le Gantt, qui n'en fait pas partie.
+ */
 export const SCHEMAS: ReadonlyArray<AssistantSchema> = [
   ...SCHEMAS_STRUCTURELS,
   ...SCHEMAS_COMPORTEMENTAUX,
+  ...SCHEMAS_PROJET,
 ];
 
 export function schemaById(id: string): AssistantSchema | undefined {

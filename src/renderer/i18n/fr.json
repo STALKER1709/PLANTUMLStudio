@@ -96,5 +96,6 @@
   "common.no": "Non",
   "errors.fixRedundancies": "Corriger ({count})",
   "errors.fixRedundanciesHint": "Retire les flèches que la généralisation rend redondantes, en laissant un commentaire à leur place. Ctrl+Z annule.",
-  "errors.redundantRemoved": "« {actor} » hérite de « {ancestor} » : sa flèche vers « {useCase} » a été retirée, l'héritage la lui donne déjà."
+  "errors.redundantRemoved": "« {actor} » hérite de « {ancestor} » : sa flèche vers « {useCase} » a été retirée, l'héritage la lui donne déjà.",
+  "template.category.planification": "Planification (hors UML)"
 }

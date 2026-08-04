@@ -96,5 +96,6 @@
   "common.no": "No",
   "errors.fixRedundancies": "Fix ({count})",
   "errors.fixRedundanciesHint": "Removes the arrows made redundant by generalisation, leaving a comment in their place. Ctrl+Z undoes it.",
-  "errors.redundantRemoved": "\"{actor}\" inherits from \"{ancestor}\": its arrow to \"{useCase}\" was removed, inheritance already grants it."
+  "errors.redundantRemoved": "\"{actor}\" inherits from \"{ancestor}\": its arrow to \"{useCase}\" was removed, inheritance already grants it.",
+  "template.category.planification": "Planning (non-UML)"
 }

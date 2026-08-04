@@ -8,9 +8,10 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 ## Fonctionnalités
 
 - **Assistant de création** : un formulaire par type de diagramme — acteurs, classes, messages,
-  relations — dont l'application écrit la source PlantUML. Les 14 types sont couverts, aucune
-  syntaxe à connaître, et l'aperçu de la source se met à jour à chaque frappe. Le diagramme de
-  cas d'utilisation se saisit **par acteur** : son rôle, de qui il hérite, et tout ce qu'il fait
+  relations — dont l'application écrit la source PlantUML. Les 14 types UML sont couverts, plus
+  le Gantt ; aucune syntaxe à connaître, et l'aperçu de la source se met à jour à chaque frappe.
+  Le diagramme de cas d'utilisation se saisit **par acteur** : son rôle, de qui il hérite, et
+  tout ce qu'il fait
 - **Règle d'héritage appliquée** : un cas ne reçoit jamais deux flèches d'acteurs qui
   s'héritent — la généralisation les donne déjà. L'assistant ne l'écrit pas, et les diagrammes
   déjà écrits sont vérifiés : la flèche de trop est signalée avec sa ligne, puis **« Corriger »
@@ -40,6 +41,12 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))
+- **Diagramme de Gantt** — planification des tâches dans le temps : phases, enchaînements
+  (« commence à la fin de »), jalons, avancement et jours non travaillés. Le formulaire est en
+  français et la syntaxe anglaise de PlantUML est écrite pour vous : on saisit « samedi », la
+  source porte `saturday are closed`. **Le Gantt n'est pas un diagramme UML** — il ne figure
+  pas dans la norme 2.5 — et il est rangé dans sa propre famille, « Planification (hors UML) »
+  ([`docs/gantt.md`](docs/gantt.md))
 - Formalisme **appliqué automatiquement à toute source**, y compris écrite à la main : aucune
   ligne de `skinparam` à recopier, et une bascule pour revenir au rendu PlantUML par défaut
 - Thème clair / sombre, interface en français et en anglais
@@ -161,12 +168,13 @@ est refusée si elle sort du dossier du projet ouvert (`FileService.isWithin`).
 
 ```
 docs/formalisme.md  référence du formalisme appliqué aux 14 diagrammes
+docs/gantt.md       diagramme de Gantt : formulaire, syntaxe produite, limites
 src/
   main/          processus principal (services, IPC, fenêtre, logger)
   preload/       pont contextBridge (sandboxé, sans import relatif)
   renderer/      application React (composants, stores Zustand, hooks, i18n, styles)
   shared/        types et constantes communs — sans dépendance Electron ni Node
-templates/       14 modèles .puml (+ _formalisme.puml, réglages communs)
+templates/       14 modèles UML + le Gantt (+ _formalisme.puml, réglages communs)
 resources/       plantuml.jar, jre/, graphviz/ (non versionnés — voir resources/README.md)
 scripts/         téléchargement des ressources et vérification hors ligne
 tests/unit/      Vitest — services du main process
@@ -176,7 +184,7 @@ tests/e2e/       Playwright — application Electron complète
 ## Tests
 
 ```bash
-npm test                 # tests unitaires ; le rendu réel des 14 modèles n’est joué
+npm test                 # tests unitaires ; le rendu réel des modèles livrés n’est joué
                          # que si resources/plantuml.jar est présent
 npm run build && npm run test:e2e
 ```
