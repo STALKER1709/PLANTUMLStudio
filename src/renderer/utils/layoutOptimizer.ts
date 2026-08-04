@@ -310,6 +310,14 @@ export function countDefects(score: LayoutScore): number {
 }
 
 export interface OptimizeOptions {
+  /**
+   * Éléments que la recherche ne doit pas déplacer.
+   *
+   * Sert au formalisme des cas d'utilisation : les acteurs sont rangés en
+   * colonnes avant la recherche, et celle-ci ne doit pas défaire ce rangement
+   * pour gagner quelques unités de tracé.
+   */
+  locked?: ReadonlySet<string>;
   /** Amplitudes essayées, en unités SVG. */
   steps?: readonly number[];
   /** Nombre maximal de passes ; chacune applique le meilleur déplacement. */
@@ -340,6 +348,8 @@ export interface OptimizeResult {
   moves: number;
   /** `true` si le diagramme dépassait la taille traitable. */
   skipped: boolean;
+  /** Nombre d'acteurs rangés en colonnes par le formalisme, le cas échéant. */
+  arranged?: number;
 }
 
 /**
@@ -366,7 +376,10 @@ export function optimizeLayout(
   // que ce qu'elle allonge, et n'a donc rien à gagner à tasser le diagramme.
   const reference = scoreLayout(model, depart).length;
   const before = scoreLayout(model, depart, reference);
-  const deplacables = model.nodes.filter((node) => !node.container);
+  const verrouilles = options.locked ?? new Set<string>();
+  const deplacables = model.nodes.filter(
+    (node) => !node.container && !verrouilles.has(node.id)
+  );
 
   if (deplacables.length === 0 || deplacables.length > maxNodes) {
     return {

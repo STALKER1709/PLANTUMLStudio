@@ -170,6 +170,35 @@ describe.skipIf(!fs.existsSync(JAR))('Rendu réel des sources produites', () => 
     expect(erreurDeRendu(source), source).toBeNull();
   });
 
+  it('place les acteurs secondaires du côté opposé aux principaux', () => {
+    const schema = schemaById('08-diagramme-cas-utilisation');
+    if (!schema) throw new Error('schéma introuvable');
+
+    const source = schema.build('Épreuve', {
+      systeme: [{ nom: 'Plateforme' }],
+      acteurs: [
+        { nom: 'Client', role: 'principal' },
+        { nom: 'API de paiement', role: 'secondaire' },
+      ],
+      cas: [{ nom: 'Payer' }],
+      associations: [
+        { acteur: 'Client', cas: 'Payer' },
+        { acteur: 'API de paiement', cas: 'Payer' },
+      ],
+      relationsCas: [],
+      generalisations: [],
+    });
+
+    // Un acteur secondaire est un système : rectangle stéréotypé.
+    expect(source).toContain('rectangle "API de paiement" as API_de_paiement <<actor>>');
+    expect(source).toContain('actor "Client" as Client');
+    // Le sens d'écriture décide du côté : le principal à gauche du trait…
+    expect(source).toContain('Client -- Payer');
+    // …le secondaire à droite.
+    expect(source).toContain('Payer -- API_de_paiement');
+    expect(erreurDeRendu(source), source).toBeNull();
+  });
+
   it('applique les recettes de disposition des cas d’utilisation', () => {
     const schema = schemaById('08-diagramme-cas-utilisation');
     if (!schema) throw new Error('schéma introuvable');

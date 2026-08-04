@@ -55,16 +55,24 @@ export function App() {
         useToastStore.getState().push('info', t('toast.layoutTooLarge'));
         return;
       }
-      if (result.moves === 0) {
+      const range = result.arranged ?? 0;
+      if (result.moves === 0 && range === 0) {
         useToastStore.getState().push('info', t('toast.layoutAlreadyGood'));
         return;
       }
 
       applyLayout(result.offsets);
-      useToastStore.getState().push(
-        'success',
-        t('toast.layoutOptimized', { before: defautsAvant, after: defautsApres })
-      );
+      useToastStore
+        .getState()
+        .push(
+          'success',
+          // Sur un diagramme de cas d'utilisation, ce qui compte d'abord est que
+          // la disposition du formalisme ait été appliquée ; le compte des
+          // défauts porte alors sur l'état final, une fois les acteurs rangés.
+          range > 0
+            ? t('toast.layoutArranged', { count: range, after: defautsApres })
+            : t('toast.layoutOptimized', { before: defautsAvant, after: defautsApres })
+        );
     },
     [applyLayout, t]
   );

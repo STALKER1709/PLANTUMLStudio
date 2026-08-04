@@ -14,6 +14,15 @@ export interface UseCaseActor {
   label: string;
   /** Identifiant utilisé dans les relations. */
   id: string;
+  /**
+   * Côté du diagramme, pour les acteurs.
+   *
+   * Le formalisme place les acteurs **principaux** à gauche et les
+   * **secondaires** — services externes, systèmes tiers — à droite. Une source
+   * ne le déclare pas ; cela se lit dans la façon dont l'association est
+   * écrite : `acteur -- cas` place l'acteur à gauche, `cas -- acteur` à droite.
+   */
+  side?: 'primary' | 'secondary';
 }
 
 export interface UseCaseModel {
@@ -112,12 +121,26 @@ export function parseUseCaseDiagram(source: string): UseCaseModel {
   /** Du libellé ou de l'alias vers l'entrée canonique. */
   const parNom = new Map<string, UseCaseActor & { kind: 'actor' | 'usecase' }>();
 
-  const enregistrer = (kind: 'actor' | 'usecase', label: string, id: string) => {
+  const enregistrer = (
+    kind: 'actor' | 'usecase',
+    label: string,
+    id: string,
+    side?: 'primary' | 'secondary'
+  ) => {
     if (parNom.has(id) || parNom.has(label)) return;
     const entree = { kind, label, id };
     parNom.set(id, entree);
     parNom.set(label, entree);
-    (kind === 'actor' ? model.actors : model.useCases).push({ label, id });
+    if (kind === 'actor') model.actors.push({ label, id, side: side ?? 'primary' });
+    else model.useCases.push({ label, id });
+  };
+
+  /** Un acteur écrit à droite du trait est un acteur secondaire. */
+  const marquerSecondaire = (id: string) => {
+    const acteur = model.actors.find((candidat) => candidat.id === id);
+    // Une déclaration explicite en rectangle « actor » l'emporte : elle ne se
+    // laisse pas contredire par une association écrite dans l'autre sens.
+    if (acteur && acteur.side !== 'secondary') acteur.side = 'secondary';
   };
 
   significantLines(source).forEach((ligne) => {
@@ -126,6 +149,19 @@ export function parseUseCaseDiagram(source: string): UseCaseModel {
     const titre = ligne.match(/^title\s+(.+)$/i);
     if (titre && model.system === '') {
       model.system = titre[1].trim();
+      return;
+    }
+
+    // Un rectangle stéréotypé « actor » désigne un acteur non humain — service
+    // externe, système tiers — et non le cadre du système.
+    const acteurRectangle = ligne.match(
+      /^rectangle\s+(?:"([^"]+)"|([A-Za-z_][\w.]*))\s*(?:as\s+([A-Za-z_][\w.]*))?\s*<<\s*actor\s*>>/i
+    );
+    if (acteurRectangle) {
+      const label = (acteurRectangle[1] ?? acteurRectangle[2] ?? '').trim();
+      if (label !== '') {
+        enregistrer('actor', label, (acteurRectangle[3] ?? label).trim(), 'secondary');
+      }
       return;
     }
 
@@ -180,11 +216,13 @@ export function parseUseCaseDiagram(source: string): UseCaseModel {
       return;
     }
 
-    // Association acteur ↔ cas, dans un sens ou dans l'autre.
+    // Association acteur ↔ cas. Le sens d'écriture porte le côté : à gauche du
+    // trait l'acteur est principal, à droite il est secondaire.
     if (deGauche.kind === 'actor' && deDroite.kind === 'usecase') {
       model.associations.push({ actor: deGauche.id, useCase: deDroite.id });
     } else if (deGauche.kind === 'usecase' && deDroite.kind === 'actor') {
       model.associations.push({ actor: deDroite.id, useCase: deGauche.id });
+      marquerSecondaire(deDroite.id);
     }
     // Une pointe simple entre deux cas sans stéréotype n'a pas de sens UML
     // arrêté : on ne l'interprète pas plutôt que de deviner.

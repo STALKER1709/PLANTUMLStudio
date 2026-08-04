@@ -24,6 +24,9 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
   paquetage, qui **emmène tout ce qu'il contient** — pendant que les flèches sont recalculées et
   déviées pour ne traverser ni un élément ni une autre flèche ; la source reste intacte et
   l'export conserve les déplacements
+- **Disposition imposée aux cas d'utilisation** : acteurs principaux en colonne à gauche,
+  acteurs secondaires — services externes, dessinés en rectangles — en colonne à droite. Le sens
+  d'écriture des associations décide du côté, et « Optimiser » range les colonnes puis les fige
 - **Optimisation de la disposition** : le bouton « Optimiser » évalue la géométrie réellement
   dessinée — croisements, flèches qui se frôlent, éléments traversés — et cherche par
   déplacements successifs une disposition plus lisible. Mesuré sur 17 diagrammes : **11 défauts

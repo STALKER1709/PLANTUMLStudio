@@ -191,6 +191,57 @@ le troisième s'écrit dans votre source.
 | `together { … }` | maintient un groupe d'éléments sur un même axe | votre source |
 | `[norank]` sur un lien | dessine le lien sans le laisser imposer un rang | votre source |
 
+### La disposition imposée aux diagrammes de cas d'utilisation
+
+**Acteurs principaux à gauche, acteurs secondaires à droite, cas d'utilisation entre les deux.**
+Trois leviers y concourent, et il en faut trois : aucun ne suffit seul.
+
+| Levier | Ce qu'il garantit |
+| --- | --- |
+| Le **sens d'écriture** de l'association | le côté |
+| `together { … }` | l'alignement des principaux sur un même axe |
+| Le **rangement** appliqué au rendu (bouton « Optimiser ») | la position verticale |
+
+#### Le sens d'écriture décide du côté
+
+Sous `left to right direction`, Graphviz place la cible d'une association une colonne à droite
+de sa source. Il suffit donc d'écrire l'association dans le bon sens :
+
+```plantuml
+Client -- UC          ' acteur principal   : à GAUCHE du cas
+UC -- ServicePaiement ' acteur secondaire  : à DROITE du cas
+```
+
+Inverser une seule de ces lignes fait basculer l'acteur de l'autre côté du diagramme. C'est
+mesurable : écrit `ServicePaiement -- UC`, le service de paiement remonte au-dessus des acteurs
+principaux, à gauche.
+
+#### Un acteur secondaire se dessine en rectangle
+
+Un acteur secondaire est un **système**, pas une personne : API, service externe, robot de
+conversation. La notation UML le représente par un rectangle stéréotypé, ce qui le distingue au
+premier coup d'œil d'un acteur humain :
+
+```plantuml
+rectangle "Service de paiement" as Paiement <<actor>>
+```
+
+#### Ce que le source ne peut pas garantir
+
+Le côté est acquis ; **la position verticale ne l'est pas**. Graphviz range les éléments d'une
+colonne par minimisation des croisements, et aucune directive PlantUML ne contraint cet axe :
+les acteurs secondaires atterrissent volontiers tout en bas, avec de longues diagonales qui
+traversent le cadre. `together` sur eux n'y change rien.
+
+C'est le bouton **« Optimiser »** qui ferme l'écart : sur un diagramme de cas d'utilisation, il
+range d'abord les acteurs en deux colonnes — répartis régulièrement sur la hauteur du
+diagramme, dans l'ordre de la source, qui est aussi celui de la chaîne de généralisations —
+puis **fige ces positions** avant de chercher à réduire les défauts restants. Sans ce
+verrouillage, la recherche défairait le rangement pour gagner quelques unités de tracé.
+
+Le rangement passe par le même mécanisme de décalages que l'édition à la souris : il est donc
+annulable d'un clic et conservé à l'export.
+
 ### Aligner les acteurs d'un diagramme de cas d'utilisation
 
 Deux pièges se conjuguent : les acteurs se dispersent au gré de leurs liens, et une
@@ -338,7 +389,8 @@ l'application le dit.
 
 | Élément | Notation | PlantUML |
 | --- | --- | --- |
-| Acteur | personnage filaire ; élément externe jouant un rôle | `actor "Client" as C` |
+| Acteur principal | personnage filaire, **à gauche** du système | `actor "Client" as C` |
+| Acteur secondaire | rectangle stéréotypé, **à droite** du système | `rectangle "API" as A <<actor>>` |
 | Système | cadre délimitant l'espace étudié, nom en haut | `rectangle "Nom du système" { … }` |
 | Cas d'utilisation | ellipse, libellé **verbe à l'infinitif + objet** | `usecase "Réserver une prestation" as UC` |
 | Association | trait simple acteur ↔ cas | `C -- UC` |

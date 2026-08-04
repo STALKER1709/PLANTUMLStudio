@@ -102,6 +102,33 @@ skinparam monochrome true
     expect(bancal.associations).toHaveLength(1);
   });
 
+  it('distingue acteurs principaux et secondaires', () => {
+    const avecSecondaire = parseUseCaseDiagram(`
+@startuml
+actor "Client" as C
+rectangle "API de paiement" as API <<actor>>
+actor "Chatbot" as BOT
+usecase "Payer" as UC1
+usecase "Discuter" as UC2
+C -- UC1
+UC1 -- API
+UC2 -- BOT
+@enduml
+`);
+
+    const cote = (id: string) =>
+      avecSecondaire.actors.find((acteur) => acteur.id === id)?.side;
+
+    // Déclaré en rectangle stéréotypé : secondaire sans ambiguïté.
+    expect(cote('API')).toBe('secondary');
+    // Écrit à droite du trait : secondaire aussi, sans déclaration spéciale.
+    expect(cote('BOT')).toBe('secondary');
+    // Écrit à gauche : principal.
+    expect(cote('C')).toBe('primary');
+    // Le rectangle « actor » ne doit pas être pris pour le cadre du système.
+    expect(avecSecondaire.system).not.toBe('API de paiement');
+  });
+
   it('ne voit pas un diagramme de cas dans autre chose', () => {
     expect(looksLikeUseCase(parseUseCaseDiagram('@startuml\nclass A\nclass B\nA --> B\n@enduml'))).toBe(
       false

@@ -115,6 +115,11 @@ const casUtilisation: AssistantSchema = {
     const declarer = (row: Row) =>
       `actor ${quoteLabel(row.nom)} as ${aliasActeurs.get(row.nom.trim())}`;
 
+    // Un acteur secondaire est un système, pas une personne : la notation UML
+    // le dessine en rectangle stéréotypé plutôt qu'en bonhomme filaire.
+    const declarerSecondaire = (row: Row) =>
+      `rectangle ${quoteLabel(row.nom)} as ${aliasActeurs.get(row.nom.trim())} <<actor>>`;
+
     // « together » maintient les acteurs principaux sur un même axe vertical ;
     // sans lui, ils se dispersent au gré de leurs liens.
     const blocPrincipaux =
@@ -135,11 +140,18 @@ const casUtilisation: AssistantSchema = {
             '}',
           ];
 
+    // Le sens d'écriture décide du côté : sous « left to right direction »,
+    // Graphviz place la cible d'une association à droite de sa source. Un
+    // acteur principal s'écrit donc à gauche du trait, un secondaire à droite.
+    const secondaire = new Set(secondaires.map((row) => row.nom.trim()));
     const associations = filledRows(this.sections[3], values)
       .map((row) => {
         const acteur = aliasActeurs.get(row.acteur.trim());
         const cible = aliasCas.get(row.cas.trim());
-        return acteur && cible ? `${acteur} -- ${cible}` : '';
+        if (!acteur || !cible) return '';
+        return secondaire.has(row.acteur.trim())
+          ? `${cible} -- ${acteur}`
+          : `${acteur} -- ${cible}`;
       })
       .filter((ligne) => ligne !== '');
 
@@ -166,7 +178,7 @@ const casUtilisation: AssistantSchema = {
       joinLines(
         'left to right direction',
         blocPrincipaux,
-        secondaires.map(declarer),
+        secondaires.map(declarerSecondaire),
         blocSysteme,
         associations,
         relations,

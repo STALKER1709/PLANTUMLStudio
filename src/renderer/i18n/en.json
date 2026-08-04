@@ -70,6 +70,7 @@
   "preview.optimize": "Optimise",
   "preview.optimizeHint": "Look for a more readable layout: fewer crossings, touching arrows and elements cut through. The source is left untouched.",
   "toast.layoutOptimized": "Layout optimised: {before} defects → {after}.",
+  "toast.layoutArranged": "Actors arranged into columns ({count}); {after} defects left.",
   "toast.layoutAlreadyGood": "Layout already optimal: no move improves it.",
   "toast.layoutTooLarge": "Diagram too large for automatic optimisation.",
   "preview.resetLayout": "Undo every move",

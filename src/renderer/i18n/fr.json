@@ -70,6 +70,7 @@
   "preview.optimize": "Optimiser",
   "preview.optimizeHint": "Chercher une disposition plus lisible : moins de croisements, de flèches qui se touchent et d'éléments traversés. La source n'est pas modifiée.",
   "toast.layoutOptimized": "Disposition optimisée : {before} défauts → {after}.",
+  "toast.layoutArranged": "Acteurs rangés en colonnes ({count}) ; {after} défauts restants.",
   "toast.layoutAlreadyGood": "Disposition déjà optimale : aucun déplacement ne l’améliore.",
   "toast.layoutTooLarge": "Diagramme trop grand pour l’optimisation automatique.",
   "preview.resetLayout": "Annuler tous les déplacements",

@@ -41,6 +41,19 @@ async function activerFormalisme(): Promise<void> {
 }
 
 /**
+ * Les déplacements survivent aux régénérations tant qu'un élément garde son
+ * nom — c'est voulu, et documenté. Deux tests qui nomment leurs classes « A »
+ * et « B » se transmettent donc leurs déplacements : chacun doit repartir
+ * d'une disposition vierge.
+ */
+async function reinitialiserDisposition(): Promise<void> {
+  // Repéré par son intitulé : le libellé visible « ↺ 3 » varie avec le compte.
+  const bouton = window.locator('button[title="Annuler tous les déplacements"]');
+  if ((await bouton.count()) > 0) await bouton.click();
+  await expect(bouton).toHaveCount(0);
+}
+
+/**
  * Le bouton bascule, et les tests partagent la même fenêtre : cliquer sans
  * regarder l'état désactiverait l'édition laissée active par le test précédent.
  */
@@ -332,27 +345,34 @@ test('un lien contourne l’élément qu’on pose sur sa route', async () => {
 test('« Optimiser » corrige la disposition et rend compte du gain', async () => {
   test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
 
+  await reinitialiserDisposition();
   await activerFormalisme();
 
   const editor = window.locator('.monaco-editor');
   await editor.click({ force: true });
   await window.keyboard.press('Control+A');
-  // B est déclaré entre A et C : PlantUML l'aligne au milieu, et le lien A→C
-  // le traverse.
-  await window.keyboard.type('@startuml\nclass A\nclass B\nclass C\nA --> C\nA --> B\n@enduml');
+  // Noms propres à ce test : les déplacements sont indexés par nom d'élément
+  // et survivent aux régénérations, si bien que deux tests nommant tous deux
+  // leurs classes « A » et « B » se transmettraient leurs déplacements.
+  // « OptB » est déclaré entre les deux autres : PlantUML l'aligne au milieu,
+  // et le lien OptA→OptC le traverse.
+  await window.keyboard.type(
+    '@startuml\nclass OptA\nclass OptB\nclass OptC\nOptA --> OptC\nOptA --> OptB\n@enduml'
+  );
   await expect(window.locator('.preview-stage svg g.link').first()).toBeVisible({
     timeout: 30_000,
   });
 
   const positionAvant = await window
-    .locator('g.entity[data-entity="B"]')
+    .locator('g.entity[data-entity="OptB"]')
     .getAttribute('transform');
   expect(positionAvant, 'aucun déplacement au départ').toBeNull();
 
   await window.locator('button', { hasText: /^Optimiser$/ }).click();
 
-  // Le message rend compte du nombre de défauts avant et après.
-  const toast = window.locator('.toast');
+  // Le message rend compte du nombre de défauts avant et après. Les messages
+  // s'empilent : seul le dernier concerne le test en cours.
+  const toast = window.locator('.toast').last();
   await expect(toast).toBeVisible({ timeout: 20_000 });
   const message = (await toast.textContent()) ?? '';
   expect(message).toMatch(/Disposition optimisée : (\d+) défauts → (\d+)\.|Disposition déjà/);
@@ -463,6 +483,77 @@ test('la dérivation produit les autres diagrammes depuis les cas d’utilisatio
   // La source dérivée se génère sans erreur.
   await expect(window.locator('.preview-stage svg')).toBeVisible({ timeout: 30_000 });
   await expect(window.locator('.error-panel')).toHaveCount(0);
+});
+
+test('les acteurs se rangent en colonnes, et le zoom ne l’efface pas', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await reinitialiserDisposition();
+  await activerFormalisme();
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    [
+      '@startuml',
+      'left to right direction',
+      'actor "visiteur" as V',
+      'actor "client" as C',
+      'rectangle "API de paiement" as API <<actor>>',
+      'rectangle "SmartLink" {',
+      ' usecase "visiter" as U1',
+      ' usecase "payer" as U2',
+      '}',
+      'V -- U1',
+      'C -- U2',
+      'U2 -- API',
+      '@enduml',
+    ].join('\n')
+  );
+  // Attendre un élément propre à CE diagramme : les entités du précédent
+  // restent affichées jusqu'à ce que le nouveau rendu les remplace.
+  await expect(window.locator('g.entity[data-entity="API"]')).toBeVisible({ timeout: 30_000 });
+  await expect(window.locator('g.entity[data-entity="V"]')).toBeVisible();
+
+  await window.locator('button', { hasText: /^Optimiser$/ }).click();
+  // Les messages s'empilent et ne disparaissent qu'au bout de quelques
+  // secondes : seul le dernier concerne le test en cours.
+  const message = window.locator('.toast').last();
+  await expect(message).toBeVisible({ timeout: 20_000 });
+  await expect(message).toContainText('colonnes');
+
+  /** Abscisses réellement occupées, décalages compris. */
+  const abscisses = () =>
+    window.evaluate(() =>
+      Object.fromEntries(
+        Array.from(document.querySelectorAll('.preview-stage svg g[data-entity]')).map((g) => [
+          g.getAttribute('data-entity'),
+          Math.round((g as SVGGElement).getBoundingClientRect().x),
+        ])
+      )
+    );
+
+  const avant = (await abscisses()) as Record<string, number>;
+
+  // Les principaux sont à gauche de tout le reste, le secondaire à droite.
+  ['U1', 'U2', 'SmartLink', 'API'].forEach((id) => {
+    expect(avant.V, `visiteur à gauche de ${id}`).toBeLessThan(avant[id]);
+    expect(avant.C, `client à gauche de ${id}`).toBeLessThan(avant[id]);
+  });
+  ['U1', 'U2', 'SmartLink'].forEach((id) => {
+    expect(avant.API, `API à droite de ${id}`).toBeGreaterThan(avant[id]);
+  });
+
+  // Régression : un zoom reconstruit le SVG côté React, et effaçait jusqu'ici
+  // toutes les écritures faites dans le DOM — donc la disposition entière.
+  await window.locator('button[title="Zoomer"]').click();
+  await window.waitForTimeout(400);
+
+  const transformes = await window.evaluate(() =>
+    Array.from(document.querySelectorAll('.preview-stage svg g[data-entity][transform]')).length
+  );
+  expect(transformes, 'la disposition survit au zoom').toBeGreaterThan(0);
 });
 
 test("l'application ne déclenche aucune requête réseau", async () => {

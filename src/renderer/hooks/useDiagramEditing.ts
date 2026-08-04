@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
 
 import { applyLayoutOffsets, type LayoutOffsets, type Point } from '../utils/diagramLayout';
 
@@ -11,6 +11,9 @@ interface DragState {
   /** `true` pour un participant : l'axe vertical porte la chronologie. */
   horizontal: boolean;
 }
+
+/** Témoin de la disposition appliquée, porté par le SVG rendu. */
+const APPLIED_MARKER = 'data-puml-applied';
 
 /** Éléments saisissables, quel que soit le type de diagramme. */
 export const GRABBABLE = 'g[data-entity], g[data-participant]';
@@ -53,12 +56,28 @@ export function useDiagramEditing({
     return stageRef.current?.querySelector('svg') ?? null;
   }, [stageRef]);
 
-  // Réapplique les décalages après chaque nouveau rendu, et à chaque
-  // modification de la disposition.
-  useEffect(() => {
+  /**
+   * Signature de la disposition appliquée, déposée sur le SVG lui-même.
+   *
+   * Elle sert de témoin : si elle a disparu, c'est que React a reconstruit le
+   * contenu du conteneur — ce qu'il fait au moindre re-rendu touchant
+   * `dangerouslySetInnerHTML` — et que nos écritures dans le DOM sont parties
+   * avec. Sans ce témoin, un simple zoom ou un déplacement de la vue effaçait
+   * silencieusement tous les déplacements d'éléments.
+   */
+  const signature = useMemo(() => JSON.stringify(offsets), [offsets]);
+
+  // Volontairement sans tableau de dépendances : la vérification a lieu après
+  // chaque rendu, mais ne coûte qu'une lecture d'attribut tant que rien n'a
+  // changé. En effet de disposition plutôt que d'effet simple, pour que la
+  // correction précède la peinture et qu'aucun clignotement ne soit visible.
+  useLayoutEffect(() => {
     const svg = rootSvg();
-    if (svg) applyLayoutOffsets(svg, offsets);
-  }, [svgMarkup, offsets, rootSvg]);
+    if (!svg || svg.getAttribute(APPLIED_MARKER) === signature) return;
+
+    applyLayoutOffsets(svg, offsets);
+    svg.setAttribute(APPLIED_MARKER, signature);
+  });
 
   useEffect(() => {
     const stage = stageRef.current;

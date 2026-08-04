@@ -66,14 +66,18 @@ skinparam style strictuml
 left to right direction
 
 ' Un acteur est un élément externe qui joue un rôle dans le système.
-' « together » maintient les acteurs principaux sur un même axe vertical :
-' sans lui, PlantUML les disperse au gré des liens.
+' Les acteurs PRINCIPAUX vont à gauche, les SECONDAIRES à droite.
+' « together » maintient les principaux sur un même axe vertical : sans lui,
+' PlantUML les disperse au gré des liens.
 together {
   actor "Visiteur" as Visiteur
   actor "Client inscrit" as Client
   actor "Administrateur" as Admin
 }
-actor "Service de paiement" as Paiement
+
+' Un acteur secondaire est un système, pas une personne : la notation UML le
+' dessine en rectangle stéréotypé plutôt qu'en bonhomme filaire.
+rectangle "Service de paiement" as Paiement <<actor>>
 
 ' Le système est le cadre délimitant l'espace étudié ; son nom figure en haut
 ' et tous les cas d'utilisation se trouvent à l'intérieur.
@@ -88,6 +92,11 @@ rectangle "Plateforme de réservation" {
 }
 
 ' Association : trait simple reliant un acteur à un cas d'utilisation.
+' Le SENS D'ÉCRITURE décide du côté : sous « left to right direction »,
+' Graphviz place la cible d'une association à droite de sa source. Un acteur
+' principal s'écrit donc à gauche du trait — « acteur -- cas » —, un acteur
+' secondaire à droite — « cas -- acteur ». Inverser une seule de ces lignes
+' fait basculer l'acteur de l'autre côté du diagramme.
 Visiteur -- UC1
 Visiteur -- UC2
 Client -- UC1

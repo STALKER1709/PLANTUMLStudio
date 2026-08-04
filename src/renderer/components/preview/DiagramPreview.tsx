@@ -11,7 +11,9 @@ import {
   type LayoutOffsets,
   type Point,
 } from '../../utils/diagramLayout';
+import { looksLikeUseCase, parseUseCaseDiagram } from '../../derive/parseUseCase';
 import { optimizeLayout, type OptimizeResult } from '../../utils/layoutOptimizer';
+import { arrangeUseCaseColumns } from '../../utils/useCaseLayout';
 import { readSvgSize, sanitizeSvg } from '../../utils/sanitizeSvg';
 import { ErrorPanel } from '../common/ErrorPanel';
 import { ZoomPanControls } from './ZoomPanControls';
@@ -101,24 +103,42 @@ export function DiagramPreview({
         if (!svg) return;
 
         const entities = indexEntities(svg);
-        const resultat = optimizeLayout(
-          {
-            nodes: Array.from(entities.values()).map((entity) => ({
-              id: entity.id,
-              box: entity.box,
-              ellipse: entity.ellipse,
-              container: entity.container,
-            })),
-            links: indexLinks(svg),
-          },
-          layoutOffsets
-        );
-        onOptimizeLayout(resultat);
+        const modele = {
+          nodes: Array.from(entities.values()).map((entity) => ({
+            id: entity.id,
+            box: entity.box,
+            ellipse: entity.ellipse,
+            container: entity.container,
+          })),
+          links: indexLinks(svg),
+        };
+
+        // Le formalisme impose une disposition aux diagrammes de cas
+        // d'utilisation : acteurs principaux à gauche, secondaires à droite.
+        // Elle est appliquée d'abord, puis figée — la recherche ne doit pas la
+        // défaire pour gagner quelques unités de tracé.
+        const casUtilisation = parseUseCaseDiagram(pumlSource);
+        const range = looksLikeUseCase(casUtilisation)
+          ? arrangeUseCaseColumns({
+              boxes: new Map(modele.nodes.map((node) => [node.id, node.box])),
+              primary: casUtilisation.actors
+                .filter((acteur) => acteur.side !== 'secondary')
+                .map((acteur) => acteur.id),
+              secondary: casUtilisation.actors
+                .filter((acteur) => acteur.side === 'secondary')
+                .map((acteur) => acteur.id),
+            })
+          : {};
+
+        const resultat = optimizeLayout(modele, { ...layoutOffsets, ...range }, {
+          locked: new Set(Object.keys(range)),
+        });
+        onOptimizeLayout({ ...resultat, arranged: Object.keys(range).length });
       } finally {
         setIsOptimizing(false);
       }
     });
-  }, [layoutOffsets, onOptimizeLayout, stageRef]);
+  }, [layoutOffsets, onOptimizeLayout, pumlSource, stageRef]);
 
   const changeZoom = useCallback((delta: number) => {
     setZoom((previous) => clamp(Number((previous + delta).toFixed(2)), ZOOM_MIN, ZOOM_MAX));
