@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useToastStore } from '../../store/toastStore';
 import { svgToPngBase64 } from '../../utils/rasterize';
 import { AssistantDialog } from '../assistant/AssistantDialog';
+import { DeriveDialog } from '../assistant/DeriveDialog';
 import { DiagramTypeSelector } from '../common/DiagramTypeSelector';
 
 const FORMATS: DiagramFormat[] = ['png', 'svg', 'pdf'];
@@ -15,12 +16,14 @@ const FORMATS: DiagramFormat[] = ['png', 'svg', 'pdf'];
 export function Toolbar() {
   const { t } = useTranslation();
   const [assistantOuvert, setAssistantOuvert] = useState(false);
+  const [derivationOuverte, setDerivationOuverte] = useState(false);
 
   const project = useProjectStore((state) => state.project);
   const openProject = useProjectStore((state) => state.openProject);
   const createProject = useProjectStore((state) => state.createProject);
   const saveCurrentFile = useProjectStore((state) => state.saveCurrentFile);
   const saveCurrentFileAs = useProjectStore((state) => state.saveCurrentFileAs);
+  const refreshTree = useProjectStore((state) => state.refreshTree);
 
   const filePath = useEditorStore((state) => state.filePath);
   const content = useEditorStore((state) => state.content);
@@ -37,6 +40,35 @@ export function Toolbar() {
   const setApplyFormalism = useSettingsStore((state) => state.setApplyFormalism);
   const exportFormat = useSettingsStore((state) => state.exportFormat);
   const setExportFormat = useSettingsStore((state) => state.setExportFormat);
+
+  /**
+   * Écrit toutes les dérivations dans le projet ouvert.
+   *
+   * Un échec par fichier n'interrompt pas les autres : mieux vaut douze
+   * diagrammes sur treize qu'un abandon au premier conflit de nom.
+   */
+  const enregistrerDerivations = async (fichiers: Array<{ name: string; content: string }>) => {
+    const racine = project?.rootPath;
+    if (!racine) return;
+
+    let ecrits = 0;
+    const echecs: string[] = [];
+    for (const fichier of fichiers) {
+      const resultat = await window.electronAPI.createFile(racine, fichier.name, fichier.content);
+      if (resultat.ok) ecrits += 1;
+      else echecs.push(fichier.name);
+    }
+
+    await refreshTree();
+    useToastStore
+      .getState()
+      .push(
+        echecs.length === 0 ? 'success' : 'error',
+        echecs.length === 0
+          ? t('derive.saved', { count: ecrits })
+          : t('derive.savedPartly', { count: ecrits, failed: echecs.join(', ') })
+      );
+  };
 
   const exportDiagram = async () => {
     // Un diagramme retouché à la souris s'exporte tel qu'il est affiché :
@@ -143,6 +175,16 @@ export function Toolbar() {
         <button type="button" onClick={() => setAssistantOuvert(true)}>
           {t('assistant.open')}
         </button>
+        {/* Dérive séquences, communications et classes d'analyse depuis le
+            diagramme de cas d'utilisation ouvert. */}
+        <button
+          type="button"
+          disabled={content.trim() === ''}
+          title={t('derive.hint')}
+          onClick={() => setDerivationOuverte(true)}
+        >
+          {t('derive.open')}
+        </button>
         <DiagramTypeSelector isDirty={isDirty} onInsert={setContent} />
         {/* Le formalisme s'applique à toute source, y compris saisie à la main. */}
         <button
@@ -178,6 +220,21 @@ export function Toolbar() {
           ))}
         </select>
       </span>
+
+      <DeriveDialog
+        open={derivationOuverte}
+        source={content}
+        projectPath={project?.rootPath ?? null}
+        onCancel={() => setDerivationOuverte(false)}
+        onInsert={(derive) => {
+          setContent(derive);
+          setDerivationOuverte(false);
+        }}
+        onSaveAll={(fichiers) => {
+          void enregistrerDerivations(fichiers);
+          setDerivationOuverte(false);
+        }}
+      />
 
       <AssistantDialog
         open={assistantOuvert}

@@ -409,6 +409,62 @@ test("l'assistant écrit un diagramme sans qu'on tape de PlantUML", async () => 
   await expect(window.locator('.error-panel')).toHaveCount(0);
 });
 
+test('la dérivation produit les autres diagrammes depuis les cas d’utilisation', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    [
+      '@startuml',
+      'actor "Client" as C',
+      'actor "Prestataire" as P',
+      'usecase "Publier une mission" as UC1',
+      'usecase "Postuler" as UC2',
+      'usecase "S authentifier" as UC3',
+      'C -- UC1',
+      'P -- UC2',
+      'UC1 ..> UC3 : <<include>>',
+      '@enduml',
+    ].join('\n')
+  );
+  await expect(window.locator('.preview-stage svg')).toBeVisible({ timeout: 30_000 });
+
+  await window.locator('button', { hasText: /^Dériver$/ }).click();
+  const dialogue = window.locator('.dialog.assistant');
+  await expect(dialogue).toBeVisible();
+
+  // Le diagramme a bien été lu.
+  await expect(dialogue.locator('.assistant-aide').first()).toContainText('2 acteurs');
+  await expect(dialogue.locator('.assistant-aide').first()).toContainText('3 cas');
+
+  // Classes d'analyse, vue d'ensemble, puis séquence et communication par cas.
+  const propositions = await dialogue.locator('.derive-choix strong').allTextContents();
+  expect(propositions).toHaveLength(8);
+  expect(propositions).toContain("Classes d'analyse");
+  expect(propositions).toContain('Séquence — Publier une mission');
+
+  // Ce qui ne se dérive pas est dit, avec sa raison.
+  await expect(dialogue.locator('.derive-exclusions li').first()).toContainText('domaine');
+
+  await dialogue.locator('.derive-choix', { hasText: 'Séquence — Publier une mission' }).click();
+  const apercu = dialogue.locator('.assistant-apercu pre');
+  // L'acteur du cas et le cas inclus s'y retrouvent, sans avoir été saisis.
+  await expect(apercu).toContainText('actor "Client"');
+  await expect(apercu).toContainText('ref over');
+  await expect(apercu).toContainText('S authentifier');
+
+  await dialogue.locator('button', { hasText: /^Ouvrir dans l’éditeur$/ }).click();
+  await expect(dialogue).toHaveCount(0);
+
+  // La source dérivée se génère sans erreur.
+  await expect(window.locator('.preview-stage svg')).toBeVisible({ timeout: 30_000 });
+  await expect(window.locator('.error-panel')).toHaveCount(0);
+});
+
 test("l'application ne déclenche aucune requête réseau", async () => {
   const requests: string[] = [];
   window.on('request', (request) => {

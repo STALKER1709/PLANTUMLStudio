@@ -621,3 +621,44 @@ input[type='text'] {
   font-size: 12px;
   color: var(--color-warning);
 }
+
+/* --------------------------------------------------- Dérivation */
+
+.derive-liste {
+  gap: 6px;
+}
+
+.derive-choix {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.derive-choix.actif {
+  border-color: var(--color-accent);
+}
+
+.derive-choix span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.derive-choix em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.derive-exclusions {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}

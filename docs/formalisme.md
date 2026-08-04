@@ -130,7 +130,55 @@ rendu par `-config`, et l'y recopier le ferait apparaître deux fois.
 Les sources produites par les 14 formulaires sont **générées par `plantuml.jar` à chaque
 exécution des tests** : un formulaire qui écrirait une source invalide fait échouer la suite.
 
-## 1 ter. Maîtriser la disposition
+## 1 ter. Dériver les autres diagrammes des cas d'utilisation
+
+Le bouton **« Dériver »** lit le diagramme de cas d'utilisation ouvert dans l'éditeur — écrit à
+la main, collé ou produit par l'assistant — et en tire d'autres diagrammes.
+
+### Ce qui se dérive, et pourquoi
+
+Un diagramme de cas d'utilisation dit **qui fait quoi**, et quels cas s'appellent entre eux. Il
+ne dit rien du **comment**, ni des données manipulées. Seules les dérivations qui se contentent
+du « qui fait quoi » sont donc légitimes.
+
+Les diagrammes produits suivent le **modèle d'analyse** de Jacobson, où un cas d'utilisation se
+réalise par trois sortes d'objets : une **frontière** (ce que l'acteur manipule), un
+**contrôle** (la logique du cas) et des **entités** (les données).
+
+| Dérivation | Ce qui la fonde |
+| --- | --- |
+| Un **diagramme de séquence** par cas | acteurs associés au cas + frontière + contrôle ; les cas `<<include>>` deviennent des `ref` |
+| Un **diagramme de communication** par cas | mêmes échanges, vus par les liens entre objets |
+| Le **diagramme de classes d'analyse** | une frontière par acteur, un contrôle par cas, les accès et les `<<include>>` |
+| La **vue d'ensemble des interactions** | l'enchaînement déduit des `<<include>>` et `<<extend>>` |
+
+Les **généralisations d'acteurs sont suivies** : un acteur qui en spécialise un autre participe
+aussi à ses cas, et apparaît donc dans les séquences correspondantes.
+
+### Ce qui ne se dérive pas
+
+| Diagramme | Raison |
+| --- | --- |
+| Classes de **conception** | attributs, méthodes et associations viennent du domaine, pas des cas |
+| **États-transitions** | il décrit le cycle de vie d'un objet, absent des cas d'utilisation |
+| **Activité** | il détaille le déroulement interne d'un cas ; les cas n'en donnent que le nom |
+| Composants, déploiement, objets, temps, structure composite, profil | ils relèvent de l'architecture ou de l'exécution |
+
+La boîte de dialogue affiche cette liste avec ses raisons : sans cela, l'absence d'un type
+passerait pour une lacune de l'outil, alors qu'elle tient à ce que le diagramme de départ ne
+contient pas.
+
+### Ce que cela vous laisse à faire
+
+**Aucun diagramme produit n'est fini.** Les classes *entité* — celles qui portent les données —
+ne se déduisent de rien et restent à identifier ; le diagramme de classes d'analyse le rappelle
+par une note. Les séquences donnent l'ossature frontière/contrôle, pas les échanges avec les
+entités.
+
+Chaque source dérivée est **générée par `plantuml.jar` à chaque exécution des tests**, y compris
+celles tirées de la sortie de l'assistant : les deux moitiés de la chaîne doivent s'emboîter.
+
+## 1 quater. Maîtriser la disposition
 
 PlantUML calcule seul le placement. Trois leviers suffisent à obtenir une disposition proche
 de celle d'un outil à placement manuel — les deux premiers sont déjà dans le formalisme commun,
@@ -172,7 +220,7 @@ Ce réglage supprime le **pied** des diagrammes de séquence — la reprise des
 participants sous les lignes de vie. UML ne l'exige pas, et son absence allège le
 diagramme ; c'est néanmoins un effet à connaître, car il ne se déduit pas du nom du réglage.
 
-## 1 quater. Éditer le rendu
+## 1 quinquies. Éditer le rendu
 
 La disposition calculée peut être retouchée **à la souris**, sans toucher au texte.
 
@@ -236,7 +284,7 @@ Ce que cela suppose, et ce que cela implique :
   régénérer depuis la source.
 - **La zone visible s'agrandit** pour accueillir un élément tiré au-delà du cadre calculé.
 
-## 1 quinquies. Optimiser la disposition
+## 1 sexies. Optimiser la disposition
 
 Le bouton **« Optimiser »** de la prévisualisation cherche une disposition plus lisible et
 l'applique sous forme de déplacements — les mêmes que ceux de l'édition à la souris, donc

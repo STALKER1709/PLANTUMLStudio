@@ -10,6 +10,10 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - **Assistant de création** : un formulaire par type de diagramme — acteurs, classes, messages,
   relations — dont l'application écrit la source PlantUML. Les 14 types sont couverts, aucune
   syntaxe à connaître, et l'aperçu de la source se met à jour à chaque frappe
+- **Dérivation depuis les cas d'utilisation** : à partir d'un diagramme de cas d'utilisation —
+  écrit à la main, collé ou produit par l'assistant — l'application tire un diagramme de
+  séquence et un diagramme de communication **par cas**, le diagramme de classes d'analyse et la
+  vue d'ensemble des interactions. Ce qui ne se dérive pas est listé avec sa raison
 - Éditeur Monaco avec coloration syntaxique PlantUML, autocomplétion et extraits de code
 - Prévisualisation SVG en temps réel (rendu débouncé, zoom et déplacement à la souris)
 - Panneau d'erreurs **en français**, avec numéro de ligne cliquable qui positionne le curseur
