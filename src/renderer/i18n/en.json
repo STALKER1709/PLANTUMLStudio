@@ -1,7 +1,6 @@
 {
   "app.title": "PlantUML Studio",
   "app.subtitle": "Fully offline UML editor",
-
   "toolbar.openProject": "Open project",
   "toolbar.createProject": "New project",
   "toolbar.newFile": "New diagram",
@@ -22,7 +21,6 @@
   "template.category.structurel": "Structure diagrams",
   "template.category.comportemental": "Behaviour diagrams",
   "toolbar.noFile": "No file open",
-
   "assistant.open": "Assistant",
   "assistant.title": "Diagram creation assistant",
   "assistant.type": "Diagram type",
@@ -32,7 +30,6 @@
   "assistant.removeRow": "Remove this row",
   "assistant.insert": "Create diagram",
   "assistant.willReplace": "The current editor content will be replaced.",
-
   "derive.open": "Derive",
   "derive.hint": "Produce sequence, communication and analysis class diagrams from the open use case diagram.",
   "derive.title": "Derive from the use case diagram",
@@ -45,11 +42,9 @@
   "derive.needProject": "Open a project to save several files.",
   "derive.saved": "{count} derived diagrams saved to the project.",
   "derive.savedPartly": "{count} diagrams saved; failed for: {failed}",
-
   "panel.files": "Files",
   "panel.editor": "Editor",
   "panel.preview": "Preview",
-
   "filetree.empty": "No project open. Use \"Open project\" to pick a folder containing your .puml files.",
   "filetree.refresh": "Refresh",
   "filetree.newFile": "New file",
@@ -58,7 +53,6 @@
   "filetree.promptNewFile": "Name of the new diagram:",
   "filetree.promptRename": "New name:",
   "filetree.confirmDelete": "Permanently delete \"{name}\"?",
-
   "preview.zoomIn": "Zoom in",
   "preview.zoomOut": "Zoom out",
   "preview.resetZoom": "Zoom 100%",
@@ -75,13 +69,11 @@
   "toast.layoutTooLarge": "Diagram too large for automatic optimisation.",
   "preview.resetLayout": "Undo every move",
   "preview.duration": "Rendered in {ms} ms",
-
   "errors.title": "Rendering error",
   "errors.gotoLine": "Line {line}",
   "errors.warningsTitle": "To fix in the diagram",
   "errors.redundantAssociation": "\"{actor}\" inherits from \"{ancestor}\": its arrow to \"{useCase}\" is redundant — inheritance already grants it.",
   "errors.unknown": "Unknown error.",
-
   "env.title": "Environment diagnostics",
   "env.checking": "Checking the environment…",
   "env.java": "Java",
@@ -92,16 +84,43 @@
   "env.embedded": "embedded",
   "env.system": "system",
   "env.blocked": "Diagrams cannot be generated until these issues are resolved.",
-
   "toast.saved": "\"{name}\" saved.",
   "toast.exported": "Export complete: {path}",
   "toast.projectOpened": "Project opened: {name}",
   "toast.fileCreated": "File created: {name}",
   "toast.fileDeleted": "File deleted: {name}",
   "toast.error": "Error: {message}",
-
   "common.cancel": "Cancel",
   "common.close": "Close",
   "common.yes": "Yes",
-  "common.no": "No"
+  "common.no": "No",
+  "analyze.open": "Analyse a text",
+  "analyze.hint": "Describe the system in plain English; the application extracts actors and their use cases.",
+  "analyze.title": "Analyse a textual description",
+  "analyze.language": "Text language",
+  "analyze.languageAuto": "Automatic detection ({detected})",
+  "analyze.lang.fr": "French",
+  "analyze.lang.en": "English",
+  "analyze.placeholder": "Describe the system in short sentences.\n\nOnline bookstore\nA visitor can browse the catalogue and create an account.\nThe registered customer inherits from the visitor.\nThe registered customer can place an order.\nThe payment gateway is an external service.",
+  "analyze.examplesTitle": "Best recognised phrasings",
+  "analyze.example.story": "As a warehouse clerk, I want to prepare a shipment.",
+  "analyze.example.can": "A visitor can browse the catalogue and create an account.",
+  "analyze.example.allow": "The system shall allow the customer to pay an order.",
+  "analyze.example.inherits": "The registered customer inherits from the visitor.",
+  "analyze.example.external": "The payment gateway is an external service.",
+  "analyze.example.includes": "Place an order includes authenticate.",
+  "analyze.kind.system": "System",
+  "analyze.kind.actor": "Actors",
+  "analyze.kind.inheritance": "Generalisations",
+  "analyze.kind.useCase": "Use cases per actor",
+  "analyze.kind.internalUseCase": "Use cases without a direct actor",
+  "analyze.kind.include": "Inclusions",
+  "analyze.kind.extend": "Extensions",
+  "analyze.fromLine": "line {line}",
+  "analyze.ignored": "Sentences left aside",
+  "analyze.ignoredHint": "Nothing was extracted from them: no actor or action recognised. Rephrase them as short sentences, or type them into the assistant by hand.",
+  "analyze.nothing": "Type a description: actors and their use cases will appear here, each with the sentence that produced it.",
+  "analyze.proposalOnly": "A proposal to check: nothing is written before you validate it in the assistant.",
+  "analyze.toAssistant": "Open in the assistant",
+  "analyze.needActor": "No actor was recognised: state who does what."
 }

@@ -622,6 +622,150 @@ input[type='text'] {
   color: var(--color-warning);
 }
 
+/* ------------------------------------ Analyse d'une description textuelle */
+
+.dialog.analyse {
+  width: min(1100px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.analyse-corps {
+  display: grid;
+  /* Le texte saisi et ce qui en a été tiré se lisent en vis-à-vis : c'est la
+     comparaison des deux qui permet de valider une proposition. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.analyse-saisie {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.analyse-langue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.analyse-texte {
+  flex: 1;
+  min-height: 260px;
+  resize: none;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.analyse-exemples {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.analyse-exemples summary {
+  cursor: pointer;
+}
+
+.analyse-exemples ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.analyse-resultat {
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.analyse-vide {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.analyse-groupe h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analyse-compte {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.analyse-groupe ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analyse-groupe li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-left: 2px solid var(--color-border);
+  padding-left: 8px;
+}
+
+.analyse-libelle {
+  font-size: 13px;
+}
+
+/* La phrase d'origine reste discrète mais toujours présente : sans elle, la
+   proposition ne serait pas vérifiable. */
+.analyse-source {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analyse-ignorees li {
+  border-left-color: var(--color-warning);
+}
+
+.analyse-aide {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.analyse-avertissement {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 /* --------------------------------------------------- Dérivation */
 
 .derive-liste {
