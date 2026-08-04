@@ -13,8 +13,9 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
   cas d'utilisation se saisit **par acteur** : son rôle, de qui il hérite, et tout ce qu'il fait
 - **Règle d'héritage appliquée** : un cas ne reçoit jamais deux flèches d'acteurs qui
   s'héritent — la généralisation les donne déjà. L'assistant ne l'écrit pas, et les diagrammes
-  déjà écrits sont vérifiés : la flèche de trop est signalée avec sa ligne, sans être supprimée
-  d'office
+  déjà écrits sont vérifiés : la flèche de trop est signalée avec sa ligne, puis **« Corriger »
+  les retire toutes d'un clic**, en laissant à leur place un commentaire qui dit ce qui a été
+  enlevé et pourquoi. La correction passe par l'éditeur, donc Ctrl+Z la défait
 - **Dérivation depuis les cas d'utilisation** : à partir d'un diagramme de cas d'utilisation —
   écrit à la main, collé ou produit par l'assistant — l'application tire un diagramme de
   séquence et un diagramme de communication **par cas**, le diagramme de classes d'analyse et la

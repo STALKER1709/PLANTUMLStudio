@@ -10,9 +10,21 @@ export interface ErrorPanelProps {
   warnings?: PlantUMLError[];
   /** Saut direct à la ligne fautive dans l'éditeur. */
   onGotoLine(line: number): void;
+  /**
+   * Corrige d'un clic tout ce que les avertissements signalent.
+   *
+   * Absent quand rien n'est corrigeable automatiquement : le bouton n'apparaît
+   * alors pas, plutôt que d'être affiché inerte.
+   */
+  onFixWarnings?(): void;
 }
 
-export function ErrorPanel({ errors, warnings = [], onGotoLine }: ErrorPanelProps) {
+export function ErrorPanel({
+  errors,
+  warnings = [],
+  onGotoLine,
+  onFixWarnings,
+}: ErrorPanelProps) {
   const { t } = useTranslation();
   const bloquant = errors.length > 0;
 
@@ -46,7 +58,19 @@ export function ErrorPanel({ errors, warnings = [], onGotoLine }: ErrorPanelProp
 
       {warnings.length > 0 && (
         <>
-          <h3 className="warnings-title">{t('errors.warningsTitle')}</h3>
+          <h3 className="warnings-title">
+            {t('errors.warningsTitle')}
+            {onFixWarnings && (
+              <button
+                type="button"
+                className="warnings-fix"
+                title={t('errors.fixRedundanciesHint')}
+                onClick={onFixWarnings}
+              >
+                {t('errors.fixRedundancies', { count: warnings.length })}
+              </button>
+            )}
+          </h3>
           <ul>
             {warnings.map((warning, index) => (
               <li key={`${warning.raw}-${index}`}>

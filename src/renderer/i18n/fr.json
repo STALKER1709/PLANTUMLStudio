@@ -1,7 +1,6 @@
 {
   "app.title": "PlantUML Studio",
   "app.subtitle": "Éditeur UML 100 % hors ligne",
-
   "toolbar.openProject": "Ouvrir un projet",
   "toolbar.createProject": "Nouveau projet",
   "toolbar.newFile": "Nouveau diagramme",
@@ -22,7 +21,6 @@
   "template.category.structurel": "Diagrammes structurels",
   "template.category.comportemental": "Diagrammes comportementaux",
   "toolbar.noFile": "Aucun fichier ouvert",
-
   "assistant.open": "Assistant",
   "assistant.title": "Assistant de création de diagramme",
   "assistant.type": "Type de diagramme",
@@ -32,7 +30,6 @@
   "assistant.removeRow": "Supprimer cette ligne",
   "assistant.insert": "Créer le diagramme",
   "assistant.willReplace": "Le contenu actuel de l'éditeur sera remplacé.",
-
   "derive.open": "Dériver",
   "derive.hint": "Produire séquences, communications et classes d'analyse à partir du diagramme de cas d'utilisation ouvert.",
   "derive.title": "Dériver depuis le diagramme de cas d'utilisation",
@@ -45,11 +42,9 @@
   "derive.needProject": "Ouvrez un projet pour enregistrer plusieurs fichiers.",
   "derive.saved": "{count} diagrammes dérivés enregistrés dans le projet.",
   "derive.savedPartly": "{count} diagrammes enregistrés ; échec pour : {failed}",
-
   "panel.files": "Fichiers",
   "panel.editor": "Éditeur",
   "panel.preview": "Prévisualisation",
-
   "filetree.empty": "Aucun projet ouvert. Utilisez « Ouvrir un projet » pour choisir un dossier contenant vos fichiers .puml.",
   "filetree.refresh": "Actualiser",
   "filetree.newFile": "Nouveau fichier",
@@ -58,7 +53,6 @@
   "filetree.promptNewFile": "Nom du nouveau diagramme :",
   "filetree.promptRename": "Nouveau nom :",
   "filetree.confirmDelete": "Supprimer définitivement « {name} » ?",
-
   "preview.zoomIn": "Zoomer",
   "preview.zoomOut": "Dézoomer",
   "preview.resetZoom": "Zoom 100 %",
@@ -75,13 +69,11 @@
   "toast.layoutTooLarge": "Diagramme trop grand pour l’optimisation automatique.",
   "preview.resetLayout": "Annuler tous les déplacements",
   "preview.duration": "Généré en {ms} ms",
-
   "errors.title": "Erreur de génération",
   "errors.gotoLine": "Ligne {line}",
   "errors.warningsTitle": "À corriger dans le diagramme",
   "errors.redundantAssociation": "« {actor} » hérite de « {ancestor} » : sa flèche vers « {useCase} » est redondante, l'héritage la lui donne déjà.",
   "errors.unknown": "Erreur inconnue.",
-
   "env.title": "Diagnostic de l'environnement",
   "env.checking": "Vérification de l'environnement…",
   "env.java": "Java",
@@ -92,16 +84,17 @@
   "env.embedded": "embarqué",
   "env.system": "système",
   "env.blocked": "L'application ne peut pas générer de diagrammes tant que ces points ne sont pas résolus.",
-
   "toast.saved": "« {name} » enregistré.",
   "toast.exported": "Export terminé : {path}",
   "toast.projectOpened": "Projet ouvert : {name}",
   "toast.fileCreated": "Fichier créé : {name}",
   "toast.fileDeleted": "Fichier supprimé : {name}",
   "toast.error": "Erreur : {message}",
-
   "common.cancel": "Annuler",
   "common.close": "Fermer",
   "common.yes": "Oui",
-  "common.no": "Non"
+  "common.no": "Non",
+  "errors.fixRedundancies": "Corriger ({count})",
+  "errors.fixRedundanciesHint": "Retire les flèches que la généralisation rend redondantes, en laissant un commentaire à leur place. Ctrl+Z annule.",
+  "errors.redundantRemoved": "« {actor} » hérite de « {ancestor} » : sa flèche vers « {useCase} » a été retirée, l'héritage la lui donne déjà."
 }

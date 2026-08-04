@@ -474,6 +474,23 @@ test('une flèche rendue redondante par un héritage est signalée', async () =>
   // La ligne fautive est celle de la flèche, et elle est cliquable.
   await expect(panneau.locator('.error-line-link')).toHaveText('Ligne 6');
   await expect(window.locator('.preview-stage svg')).toBeVisible();
+
+  // Un clic retire la flèche de trop et laisse un commentaire à sa place.
+  await panneau.locator('.warnings-fix').click();
+  await expect(panneau).toHaveCount(0, { timeout: 20_000 });
+
+  // La source porte désormais l'explication, à la place de la flèche.
+  await expect(window.locator('.monaco-editor')).toContainText(
+    'sa flèche vers « Consulter » a été retirée'
+  );
+
+  // Le diagramme reste généré, et la flèche héritée a disparu du rendu. Trois
+  // traits au départ — deux associations et la généralisation —, deux après ;
+  // l'assertion patiente le temps que l'aperçu se régénère.
+  await expect(window.locator('.preview-stage svg')).toBeVisible();
+  await expect(window.locator('.preview-stage svg g.link')).toHaveCount(2, {
+    timeout: 20_000,
+  });
 });
 
 test('la dérivation produit les autres diagrammes depuis les cas d’utilisation', async () => {

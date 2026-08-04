@@ -217,7 +217,24 @@ La règle est appliquée des deux côtés :
   en entier : un cas tenu du grand-parent est tout aussi redondant.
 - **Les diagrammes déjà écrits sont vérifiés.** Une flèche redondante est signalée sous
   l'aperçu, avec le numéro de ligne cliquable — le diagramme se génère, mais il porte un trait
-  de trop. La source n'est pas modifiée : la correction reste votre décision.
+  de trop.
+- **La correction s'applique d'un clic.** Le bouton **« Corriger »**, à côté du signalement,
+  retire toutes les flèches redondantes en une fois. Rien ne se fait dans votre dos : la
+  correction part de vous, elle passe par l'éditeur, et **Ctrl+Z la défait**.
+
+Chaque flèche retirée laisse un commentaire à sa place, à l'indentation d'origine :
+
+```plantuml
+' « Client » hérite de « Visiteur » : sa flèche vers « Consulter » a été retirée,
+' l'héritage la lui donne déjà.
+```
+
+Une flèche qui disparaît sans explication se relit comme un oubli, et se réécrit à l'identique
+six mois plus tard. Le commentaire coupe court à cela.
+
+L'ancêtre le plus haut de la chaîne garde toujours la sienne — il n'a personne au-dessus de
+lui pour la lui donner — donc un cas ne se retrouve jamais orphelin, quelle que soit la
+profondeur de l'héritage.
 
 Deux acteurs **sans lien d'héritage** peuvent en revanche exécuter le même cas : deux flèches
 vers un cas unique, c'est licite, et rien n'est signalé.

@@ -146,6 +146,7 @@ export function App() {
             onOptimizeLayout={handleOptimizeLayout}
             onResetLayout={resetLayout}
             onGotoLine={requestRevealLine}
+            onCorrectSource={setContent}
           />
         }
       />

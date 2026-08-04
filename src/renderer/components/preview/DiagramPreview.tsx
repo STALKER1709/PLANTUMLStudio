@@ -16,6 +16,7 @@ import {
   looksLikeUseCase,
   parseUseCaseDiagram,
   redundantAssociations,
+  removeRedundantAssociations,
 } from '../../derive/parseUseCase';
 import { optimizeLayout, type OptimizeResult } from '../../utils/layoutOptimizer';
 import { arrangeUseCaseColumns } from '../../utils/useCaseLayout';
@@ -36,6 +37,8 @@ export interface DiagramPreviewProps {
   onOptimizeLayout(result: OptimizeResult): void;
   onResetLayout(): void;
   onGotoLine(line: number): void;
+  /** Remplace la source par sa version corrigée. */
+  onCorrectSource(source: string): void;
 }
 
 interface Offset {
@@ -53,6 +56,7 @@ export function DiagramPreview({
   onOptimizeLayout,
   onResetLayout,
   onGotoLine,
+  onCorrectSource,
 }: DiagramPreviewProps) {
   const { t } = useTranslation();
   const { svgContent, errors, isRendering, durationMs } = useDebouncedRender(
@@ -104,6 +108,21 @@ export function DiagramPreview({
       raw: `${redondance.actor} -- ${redondance.useCase}`,
     }));
   }, [pumlSource, t]);
+
+  /**
+   * Retire toutes les flèches redondantes en une fois.
+   *
+   * Chaque ligne retirée laisse à sa place un commentaire qui dit ce qui a été
+   * enlevé et pourquoi : la correction reste lisible dans la source, et un
+   * simple Ctrl+Z la défait puisqu'elle passe par l'éditeur.
+   */
+  const corrigerRedondances = useCallback(() => {
+    const { source, removed } = removeRedundantAssociations(pumlSource, (retrait) =>
+      t('errors.redundantRemoved', retrait)
+    );
+    if (removed.length === 0) return;
+    onCorrectSource(source);
+  }, [pumlSource, t, onCorrectSource]);
 
   const [isOptimizing, setIsOptimizing] = useState(false);
 
@@ -302,6 +321,7 @@ export function DiagramPreview({
           errors={errors ?? []}
           warnings={avertissements}
           onGotoLine={onGotoLine}
+          onFixWarnings={avertissements.length > 0 ? corrigerRedondances : undefined}
         />
       )}
     </div>

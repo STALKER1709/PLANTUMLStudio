@@ -326,3 +326,72 @@ export function redundantAssociations(
 
   return redondances;
 }
+
+/** Ce qu'une correction a retiré, en libellés lisibles. */
+export interface RemovedAssociation {
+  actor: string;
+  ancestor: string;
+  useCase: string;
+  line: number;
+}
+
+export interface RedundancyFix {
+  /** La source corrigée ; identique à l'originale s'il n'y avait rien à faire. */
+  source: string;
+  removed: RemovedAssociation[];
+}
+
+/**
+ * Retire d'une source les flèches qu'une généralisation rend redondantes.
+ *
+ * Une seule passe suffit, et c'est démontrable : une association n'est retirée
+ * que si un ancêtre porte le même cas, or l'ancêtre le plus haut de la chaîne
+ * n'en a aucun au-dessus de lui. Il survit donc toujours, et le cas ne se
+ * retrouve jamais orphelin.
+ *
+ * Les lignes retirées sont **remplacées par un commentaire** plutôt que
+ * supprimées, quand `comment` est fourni : une flèche qui disparaît sans
+ * explication se relit comme un oubli, et se réécrit à l'identique six mois
+ * plus tard. Le commentaire est composé par l'appelant, qui seul connaît la
+ * langue de l'interface.
+ */
+export function removeRedundantAssociations(
+  source: string,
+  comment?: (retrait: Omit<RemovedAssociation, 'line'>) => string
+): RedundancyFix {
+  const model = parseUseCaseDiagram(source);
+  if (!looksLikeUseCase(model)) return { source, removed: [] };
+
+  const redondances = redundantAssociations(model).filter(
+    (redondance): redondance is typeof redondance & { line: number } => redondance.line !== undefined
+  );
+  if (redondances.length === 0) return { source, removed: [] };
+
+  const lignes = source.split(/\r?\n/);
+  const removed: RemovedAssociation[] = [];
+
+  redondances.forEach(({ actor, ancestor, useCase, line }) => {
+    const index = line - 1;
+    if (index < 0 || index >= lignes.length) return;
+
+    const retrait = {
+      actor: labelOf(model, actor),
+      ancestor: labelOf(model, ancestor),
+      useCase: labelOf(model, useCase),
+    };
+
+    // L'indentation d'origine est conservée : le commentaire prend la place de
+    // la flèche sans désaligner ce qui l'entoure.
+    const indentation = lignes[index].match(/^\s*/)?.[0] ?? '';
+    lignes[index] = comment ? `${indentation}' ${comment(retrait)}` : '';
+    removed.push({ ...retrait, line });
+  });
+
+  // Une ligne vidée laisserait un trou : on ne garde que ce qui porte du texte,
+  // sauf si un commentaire a pris la place.
+  const corrigee = comment
+    ? lignes
+    : lignes.filter((_, index) => !removed.some((retrait) => retrait.line - 1 === index));
+
+  return { source: corrigee.join('\n'), removed };
+}

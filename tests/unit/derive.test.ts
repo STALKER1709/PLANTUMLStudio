@@ -16,6 +16,7 @@ import {
   looksLikeUseCase,
   parseUseCaseDiagram,
   redundantAssociations,
+  removeRedundantAssociations,
 } from '../../src/renderer/derive/parseUseCase';
 
 const ROOT = path.resolve(__dirname, '../..');
@@ -368,5 +369,120 @@ B <|-- A
     });
 
     expect(redundantAssociations(parseUseCaseDiagram(source))).toEqual([]);
+  });
+});
+
+describe('Correction automatique des redondances', () => {
+  const source = [
+    '@startuml',
+    'actor "Visiteur" as V',
+    'actor "Client" as C',
+    'usecase "Consulter" as UC',
+    'V -- UC',
+    'C -- UC',
+    'V <|-- C',
+    '@enduml',
+  ].join('\n');
+
+  it('retire la flèche de trop et laisse un commentaire à sa place', () => {
+    const { source: corrigee, removed } = removeRedundantAssociations(
+      source,
+      ({ actor, ancestor, useCase }) => `${actor} hérite de ${ancestor} : ${useCase} retiré.`
+    );
+
+    expect(removed).toEqual([
+      { actor: 'Client', ancestor: 'Visiteur', useCase: 'Consulter', line: 6 },
+    ]);
+    expect(corrigee.split('\n')[5]).toBe(
+      "' Client hérite de Visiteur : Consulter retiré."
+    );
+    // La flèche du porteur légitime reste, et le nombre de lignes ne bouge pas.
+    expect(corrigee).toContain('V -- UC');
+    expect(corrigee.split('\n')).toHaveLength(source.split('\n').length);
+  });
+
+  it('supprime la ligne quand aucun commentaire n’est demandé', () => {
+    const { source: corrigee } = removeRedundantAssociations(source);
+
+    expect(corrigee).not.toContain('C -- UC');
+    expect(corrigee.split('\n')).toHaveLength(source.split('\n').length - 1);
+  });
+
+  it('rend une source dont il ne reste rien à corriger', () => {
+    const { source: corrigee } = removeRedundantAssociations(source, () => 'retiré');
+
+    expect(redundantAssociations(parseUseCaseDiagram(corrigee))).toEqual([]);
+  });
+
+  it('conserve l’indentation de la ligne remplacée', () => {
+    const indentee = source.replace('C -- UC', '  C -- UC');
+    const { source: corrigee } = removeRedundantAssociations(indentee, () => 'retiré');
+
+    expect(corrigee.split('\n')[5]).toBe("  ' retiré");
+  });
+
+  it('ne touche pas une source déjà correcte', () => {
+    const propre = [
+      '@startuml',
+      'actor Client',
+      'usecase "Consulter" as UC',
+      'Client -- UC',
+      '@enduml',
+    ].join('\n');
+
+    expect(removeRedundantAssociations(propre, () => 'retiré')).toEqual({
+      source: propre,
+      removed: [],
+    });
+  });
+
+  it('laisse intacte une source qui n’est pas un diagramme de cas', () => {
+    const autre = '@startuml\nclass A\nclass B\nA --> B\n@enduml';
+
+    expect(removeRedundantAssociations(autre, () => 'retiré').source).toBe(autre);
+  });
+
+  it('garde le porteur le plus haut quand toute une chaîne porte le cas', () => {
+    const chaine = [
+      '@startuml',
+      'actor V',
+      'actor C',
+      'actor P',
+      'usecase "Consulter" as UC',
+      'V -- UC',
+      'C -- UC',
+      'P -- UC',
+      'V <|-- C',
+      'C <|-- P',
+      '@enduml',
+    ].join('\n');
+
+    const { source: corrigee, removed } = removeRedundantAssociations(chaine, () => 'retiré');
+
+    // Deux flèches partent, celle de l'ancêtre reste : le cas n'est pas orphelin.
+    expect(removed.map((retrait) => retrait.actor)).toEqual(['C', 'P']);
+    expect(corrigee).toContain('V -- UC');
+    expect(redundantAssociations(parseUseCaseDiagram(corrigee))).toEqual([]);
+  });
+
+  it('corrige aussi une source dont l’héritage est multiple', () => {
+    const multiple = [
+      '@startuml',
+      'actor A',
+      'actor B',
+      'actor C',
+      'usecase "Faire" as UC',
+      'A -- UC',
+      'C -- UC',
+      'A <|-- C',
+      'B <|-- C',
+      '@enduml',
+    ].join('\n');
+
+    const { removed } = removeRedundantAssociations(multiple, () => 'retiré');
+
+    expect(removed).toHaveLength(1);
+    expect(removed[0].actor).toBe('C');
+    expect(removed[0].ancestor).toBe('A');
   });
 });

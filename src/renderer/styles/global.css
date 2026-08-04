@@ -673,4 +673,16 @@ input[type='text'] {
   margin: 0 0 8px;
   font-size: 13px;
   color: var(--color-warning);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* La correction se propose à côté du constat, pas ailleurs dans l'interface :
+   c'est en lisant l'avertissement qu'on décide de l'appliquer. */
+.error-panel .warnings-fix {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--color-text);
+  border-color: var(--color-warning);
 }

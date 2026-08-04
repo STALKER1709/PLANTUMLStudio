@@ -1,7 +1,6 @@
 {
   "app.title": "PlantUML Studio",
   "app.subtitle": "Fully offline UML editor",
-
   "toolbar.openProject": "Open project",
   "toolbar.createProject": "New project",
   "toolbar.newFile": "New diagram",
@@ -22,7 +21,6 @@
   "template.category.structurel": "Structure diagrams",
   "template.category.comportemental": "Behaviour diagrams",
   "toolbar.noFile": "No file open",
-
   "assistant.open": "Assistant",
   "assistant.title": "Diagram creation assistant",
   "assistant.type": "Diagram type",
@@ -32,7 +30,6 @@
   "assistant.removeRow": "Remove this row",
   "assistant.insert": "Create diagram",
   "assistant.willReplace": "The current editor content will be replaced.",
-
   "derive.open": "Derive",
   "derive.hint": "Produce sequence, communication and analysis class diagrams from the open use case diagram.",
   "derive.title": "Derive from the use case diagram",
@@ -45,11 +42,9 @@
   "derive.needProject": "Open a project to save several files.",
   "derive.saved": "{count} derived diagrams saved to the project.",
   "derive.savedPartly": "{count} diagrams saved; failed for: {failed}",
-
   "panel.files": "Files",
   "panel.editor": "Editor",
   "panel.preview": "Preview",
-
   "filetree.empty": "No project open. Use \"Open project\" to pick a folder containing your .puml files.",
   "filetree.refresh": "Refresh",
   "filetree.newFile": "New file",
@@ -58,7 +53,6 @@
   "filetree.promptNewFile": "Name of the new diagram:",
   "filetree.promptRename": "New name:",
   "filetree.confirmDelete": "Permanently delete \"{name}\"?",
-
   "preview.zoomIn": "Zoom in",
   "preview.zoomOut": "Zoom out",
   "preview.resetZoom": "Zoom 100%",
@@ -75,13 +69,11 @@
   "toast.layoutTooLarge": "Diagram too large for automatic optimisation.",
   "preview.resetLayout": "Undo every move",
   "preview.duration": "Rendered in {ms} ms",
-
   "errors.title": "Rendering error",
   "errors.gotoLine": "Line {line}",
   "errors.warningsTitle": "To fix in the diagram",
   "errors.redundantAssociation": "\"{actor}\" inherits from \"{ancestor}\": its arrow to \"{useCase}\" is redundant — inheritance already grants it.",
   "errors.unknown": "Unknown error.",
-
   "env.title": "Environment diagnostics",
   "env.checking": "Checking the environment…",
   "env.java": "Java",
@@ -92,16 +84,17 @@
   "env.embedded": "embedded",
   "env.system": "system",
   "env.blocked": "Diagrams cannot be generated until these issues are resolved.",
-
   "toast.saved": "\"{name}\" saved.",
   "toast.exported": "Export complete: {path}",
   "toast.projectOpened": "Project opened: {name}",
   "toast.fileCreated": "File created: {name}",
   "toast.fileDeleted": "File deleted: {name}",
   "toast.error": "Error: {message}",
-
   "common.cancel": "Cancel",
   "common.close": "Close",
   "common.yes": "Yes",
-  "common.no": "No"
+  "common.no": "No",
+  "errors.fixRedundancies": "Fix ({count})",
+  "errors.fixRedundanciesHint": "Removes the arrows made redundant by generalisation, leaving a comment in their place. Ctrl+Z undoes it.",
+  "errors.redundantRemoved": "\"{actor}\" inherits from \"{ancestor}\": its arrow to \"{useCase}\" was removed, inheritance already grants it."
 }
