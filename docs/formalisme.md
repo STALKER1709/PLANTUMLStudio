@@ -101,7 +101,36 @@ copiez `templates/_formalisme.puml` à la racine de votre projet puis
 `!include _formalisme.puml` — les inclusions sont autorisées dans le dossier du projet ouvert,
 et nulle part ailleurs.
 
-## 1 bis. Maîtriser la disposition
+## 1 bis. Créer un diagramme sans écrire de PlantUML
+
+Le bouton **« Assistant »** de la barre d'outils ouvre un formulaire par type de diagramme :
+on saisit les acteurs, les classes, les messages et leurs relations dans des champs, et
+l'application écrit la source. Les 14 types sont couverts.
+
+Trois principes :
+
+- **Les listes liées évitent d'avoir à retenir les noms.** Un champ « De » ou « Vers » ne
+  propose que les éléments déjà déclarés plus haut dans le formulaire. Impossible de désigner
+  un élément qui n'existe pas.
+- **Les identifiants sont dérivés des libellés.** « Réserver une prestation » devient
+  `Reserver_une_prestation` : accents retirés, ponctuation remplacée, et un suffixe numérique
+  si deux libellés se ressemblent au point de donner le même identifiant. La source reste donc
+  lisible, et vous n'avez jamais à inventer d'alias.
+- **L'aperçu de la source est mis à jour à chaque frappe.** On voit ce que produit ce que l'on
+  saisit, ce qui fait de l'assistant un moyen d'apprendre la syntaxe autant que de s'en passer.
+
+L'assistant écrit aussi les **recettes de disposition** décrites à la section suivante :
+un diagramme de cas d'utilisation sort avec `left to right direction`, ses acteurs principaux
+dans un `together`, et ses généralisations en `[norank]`. C'est du travail en moins, et le
+piège du dernier point est évité d'office.
+
+Aucun `skinparam` n'est écrit dans la source produite : le formalisme commun est appliqué au
+rendu par `-config`, et l'y recopier le ferait apparaître deux fois.
+
+Les sources produites par les 14 formulaires sont **générées par `plantuml.jar` à chaque
+exécution des tests** : un formulaire qui écrirait une source invalide fait échouer la suite.
+
+## 1 ter. Maîtriser la disposition
 
 PlantUML calcule seul le placement. Trois leviers suffisent à obtenir une disposition proche
 de celle d'un outil à placement manuel — les deux premiers sont déjà dans le formalisme commun,
@@ -143,7 +172,7 @@ Ce réglage supprime le **pied** des diagrammes de séquence — la reprise des
 participants sous les lignes de vie. UML ne l'exige pas, et son absence allège le
 diagramme ; c'est néanmoins un effet à connaître, car il ne se déduit pas du nom du réglage.
 
-## 1 ter. Éditer le rendu
+## 1 quater. Éditer le rendu
 
 La disposition calculée peut être retouchée **à la souris**, sans toucher au texte.
 
@@ -207,7 +236,7 @@ Ce que cela suppose, et ce que cela implique :
   régénérer depuis la source.
 - **La zone visible s'agrandit** pour accueillir un élément tiré au-delà du cadre calculé.
 
-## 1 quater. Optimiser la disposition
+## 1 quinquies. Optimiser la disposition
 
 Le bouton **« Optimiser »** de la prévisualisation cherche une disposition plus lisible et
 l'applique sous forme de déplacements — les mêmes que ceux de l'édition à la souris, donc

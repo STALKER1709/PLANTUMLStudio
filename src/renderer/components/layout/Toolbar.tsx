@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { DiagramFormat } from '../../../shared/types';
 import { LANGUAGES, useTranslation, type Language } from '../../i18n';
 import { useEditorStore, selectIsDirty } from '../../store/editorStore';
@@ -5,12 +7,14 @@ import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useToastStore } from '../../store/toastStore';
 import { svgToPngBase64 } from '../../utils/rasterize';
+import { AssistantDialog } from '../assistant/AssistantDialog';
 import { DiagramTypeSelector } from '../common/DiagramTypeSelector';
 
 const FORMATS: DiagramFormat[] = ['png', 'svg', 'pdf'];
 
 export function Toolbar() {
   const { t } = useTranslation();
+  const [assistantOuvert, setAssistantOuvert] = useState(false);
 
   const project = useProjectStore((state) => state.project);
   const openProject = useProjectStore((state) => state.openProject);
@@ -134,6 +138,11 @@ export function Toolbar() {
       </span>
 
       <span className="group">
+        {/* L'assistant écrit la source à partir d'un formulaire : il évite
+            d'avoir à connaître la syntaxe PlantUML. */}
+        <button type="button" onClick={() => setAssistantOuvert(true)}>
+          {t('assistant.open')}
+        </button>
         <DiagramTypeSelector isDirty={isDirty} onInsert={setContent} />
         {/* Le formalisme s'applique à toute source, y compris saisie à la main. */}
         <button
@@ -169,6 +178,16 @@ export function Toolbar() {
           ))}
         </select>
       </span>
+
+      <AssistantDialog
+        open={assistantOuvert}
+        isDirty={isDirty}
+        onCancel={() => setAssistantOuvert(false)}
+        onInsert={(source) => {
+          setContent(source);
+          setAssistantOuvert(false);
+        }}
+      />
     </header>
   );
 }

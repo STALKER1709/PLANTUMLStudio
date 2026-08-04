@@ -23,6 +23,16 @@
   "template.category.comportemental": "Diagrammes comportementaux",
   "toolbar.noFile": "Aucun fichier ouvert",
 
+  "assistant.open": "Assistant",
+  "assistant.title": "Assistant de création de diagramme",
+  "assistant.type": "Type de diagramme",
+  "assistant.diagramTitle": "Titre",
+  "assistant.preview": "Source produite",
+  "assistant.addRow": "Ajouter",
+  "assistant.removeRow": "Supprimer cette ligne",
+  "assistant.insert": "Créer le diagramme",
+  "assistant.willReplace": "Le contenu actuel de l'éditeur sera remplacé.",
+
   "panel.files": "Fichiers",
   "panel.editor": "Éditeur",
   "panel.preview": "Prévisualisation",

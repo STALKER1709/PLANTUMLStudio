@@ -367,6 +367,48 @@ test('« Optimiser » corrige la disposition et rend compte du gain', async () =
   }
 });
 
+test("l'assistant écrit un diagramme sans qu'on tape de PlantUML", async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
+  await window.locator('button', { hasText: /^Assistant$/ }).click();
+
+  const dialogue = window.locator('.dialog.assistant');
+  await expect(dialogue).toBeVisible();
+
+  await dialogue.locator('.assistant-entete select').selectOption({
+    label: "Diagramme de cas d'utilisation",
+  });
+  await dialogue.locator('.assistant-entete input').fill('Réservation en ligne');
+
+  // Un acteur ajouté à la main doit apparaître dans les listes liées : c'est
+  // ce qui évite d'avoir à retenir les noms déjà déclarés.
+  const acteurs = dialogue.locator('.assistant-section', { hasText: 'Acteurs' }).first();
+  await acteurs.getByRole('button', { name: /Ajouter/ }).click();
+  await acteurs.locator('.assistant-ligne').last().locator('input').fill('Administrateur');
+
+  const associations = dialogue.locator('.assistant-section', { hasText: 'Associations' }).first();
+  const choix = associations.locator('.assistant-ligne').first().locator('select').first();
+  await expect(choix.locator('option', { hasText: 'Administrateur' })).toHaveCount(1);
+
+  // L'aperçu montre la source au fur et à mesure de la saisie.
+  const apercu = dialogue.locator('.assistant-apercu pre');
+  await expect(apercu).toContainText('title Réservation en ligne');
+  await expect(apercu).toContainText('actor "Administrateur"');
+  // Les recettes de disposition documentées sont écrites par l'assistant.
+  await expect(apercu).toContainText('left to right direction');
+  await expect(apercu).toContainText('together {');
+
+  await dialogue.locator('button', { hasText: /^Créer le diagramme$/ }).click();
+  await expect(dialogue).toHaveCount(0);
+
+  // La source atterrit dans l'éditeur et se génère sans erreur.
+  await expect(window.locator('.preview-stage svg .entity').first()).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(window.locator('.error-panel')).toHaveCount(0);
+});
+
 test("l'application ne déclenche aucune requête réseau", async () => {
   const requests: string[] = [];
   window.on('request', (request) => {

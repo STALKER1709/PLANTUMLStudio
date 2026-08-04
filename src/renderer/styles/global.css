@@ -62,6 +62,7 @@ button.primary {
 }
 
 select,
+textarea,
 input[type='text'] {
   font: inherit;
   color: inherit;
@@ -488,4 +489,135 @@ input[type='text'] {
 .preview-stage.editing svg [data-entity].dragging > *,
 .preview-stage.editing svg [data-participant].dragging > * {
   filter: drop-shadow(0 0 5px var(--color-accent));
+}
+
+/* ------------------------------------------------- Assistant de création */
+
+.dialog.assistant {
+  /* Le formulaire et l'aperçu tiennent côte à côte : la boîte occupe donc
+     l'essentiel de la fenêtre, sans jamais la dépasser. */
+  width: min(1100px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assistant-entete {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.assistant-entete label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.assistant-entete select,
+.assistant-entete input {
+  min-width: 260px;
+}
+
+.assistant-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.assistant-sections {
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assistant-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 8px 12px 12px;
+  margin: 0;
+}
+
+.assistant-section legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.assistant-aide {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.assistant-ligne {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.assistant-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  flex: 1 1 130px;
+  min-width: 0;
+}
+
+.assistant-champ input,
+.assistant-champ select,
+.assistant-champ textarea {
+  width: 100%;
+  font-family: inherit;
+}
+
+/* Un champ multiligne mérite plus de place qu'une simple étiquette. */
+.assistant-champ.champ-multiline {
+  flex: 2 1 220px;
+}
+
+.assistant-supprimer {
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.assistant-apercu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+.assistant-apercu-titre {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.assistant-apercu pre {
+  margin: 0;
+  flex: 1;
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre;
+}
+
+.assistant-avertissement {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--color-warning);
 }

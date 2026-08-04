@@ -23,6 +23,16 @@
   "template.category.comportemental": "Behaviour diagrams",
   "toolbar.noFile": "No file open",
 
+  "assistant.open": "Assistant",
+  "assistant.title": "Diagram creation assistant",
+  "assistant.type": "Diagram type",
+  "assistant.diagramTitle": "Title",
+  "assistant.preview": "Generated source",
+  "assistant.addRow": "Add",
+  "assistant.removeRow": "Remove this row",
+  "assistant.insert": "Create diagram",
+  "assistant.willReplace": "The current editor content will be replaced.",
+
   "panel.files": "Files",
   "panel.editor": "Editor",
   "panel.preview": "Preview",
