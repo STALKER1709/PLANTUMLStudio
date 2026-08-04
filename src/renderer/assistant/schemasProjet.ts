@@ -51,62 +51,81 @@ function nombre(brut: string | undefined, defaut: number): number {
 const SECTION_PROJET: AssistantSection = {
   id: 'projet',
   label: 'Projet',
-  hint: 'La date de début ancre tout le calendrier ; elle s’écrit au format AAAA-MM-JJ.',
+  hint: "La date de début est facultative : laissée vide, elle est prise sur la phase la plus précoce.",
   fields: [
-    { name: 'nom', label: 'Nom', kind: 'text', required: true, placeholder: 'Refonte du portail' },
-    { name: 'debut', label: 'Début', kind: 'text', required: true, placeholder: '2026-09-01' },
+    { name: 'nom', label: 'Nom', kind: 'text', required: true, placeholder: 'Projet de fin d’études' },
+    { name: 'debut', label: 'Début', kind: 'text', placeholder: 'AAAA-MM-JJ' },
     {
       name: 'echelle',
       label: 'Échelle',
       kind: 'choice',
       options: [
-        { value: 'daily', label: 'Jours' },
         { value: 'weekly', label: 'Semaines' },
+        { value: 'daily', label: 'Jours' },
         { value: 'monthly', label: 'Mois' },
       ],
     },
   ],
-  sample: [{ nom: 'Refonte du portail', debut: '2026-09-01', echelle: 'weekly' }],
+  sample: [{ nom: 'Projet de fin d’études', debut: '', echelle: 'weekly' }],
 };
 
+/**
+ * Phases du projet, déjà nommées : il ne reste que les périodes à saisir.
+ *
+ * Ce sont les étapes usuelles d'un projet de fin d'études, dans leur ordre
+ * habituel. Les dates livrées ne sont qu'un exemple : on les remplace par les
+ * siennes sans avoir à retaper les intitulés, ni à réfléchir à des durées et à
+ * des enchaînements — on lit un début et une fin sur son calendrier, on les
+ * recopie.
+ */
 const SECTION_TACHES: AssistantSection = {
   id: 'taches',
-  label: 'Tâches',
-  hint: "Une tâche par ligne, dans l'ordre. « Commence après » l'enchaîne à la fin d'une autre ; laissé vide, elle démarre au début du projet.",
+  label: 'Phases',
+  hint: 'Les phases sont déjà là : renseignez leur période, au format AAAA-MM-JJ. Deux phases peuvent se chevaucher — la rédaction du rapport court souvent en parallèle.',
   fields: [
-    { name: 'nom', label: 'Tâche', kind: 'text', required: true, placeholder: 'Cadrage' },
-    { name: 'phase', label: 'Phase', kind: 'text', placeholder: 'Étude' },
-    { name: 'duree', label: 'Durée (jours)', kind: 'text', required: true, placeholder: '10' },
-    { name: 'apres', label: 'Commence après', kind: 'reference', references: 'taches' },
+    { name: 'nom', label: 'Phase', kind: 'text', required: true, placeholder: 'Analyse du projet' },
+    { name: 'debut', label: 'Début', kind: 'text', required: true, placeholder: '2023-08-10' },
+    { name: 'fin', label: 'Fin', kind: 'text', required: true, placeholder: '2023-08-25' },
     { name: 'avancement', label: 'Avancement (%)', kind: 'text', placeholder: '0' },
   ],
   sample: [
-    { nom: 'Cadrage', phase: 'Étude', duree: '10', apres: '', avancement: '100' },
-    { nom: 'Conception', phase: 'Étude', duree: '15', apres: 'Cadrage', avancement: '40' },
-    { nom: 'Réalisation', phase: 'Construction', duree: '30', apres: 'Conception', avancement: '' },
-    { nom: 'Recette', phase: 'Construction', duree: '10', apres: 'Réalisation', avancement: '' },
+    { nom: "Phase d'insertion", debut: '2023-07-03', fin: '2023-07-20', avancement: '' },
+    { nom: "Étude de l'existant", debut: '2023-07-21', fin: '2023-07-31', avancement: '' },
+    { nom: 'Rédaction du cahier des charges', debut: '2023-08-01', fin: '2023-08-09', avancement: '' },
+    { nom: 'Analyse du projet', debut: '2023-08-10', fin: '2023-08-25', avancement: '' },
+    { nom: 'Conception du projet', debut: '2023-08-28', fin: '2023-09-05', avancement: '' },
+    { nom: 'Réalisation et déploiement', debut: '2023-09-06', fin: '2023-09-21', avancement: '' },
+    { nom: 'Tests et fonctionnalités', debut: '2023-09-22', fin: '2023-09-28', avancement: '' },
+    { nom: 'Rédaction du rapport', debut: '2023-08-29', fin: '2023-09-29', avancement: '' },
   ],
 };
 
 const SECTION_JALONS: AssistantSection = {
   id: 'jalons',
   label: 'Jalons',
-  hint: "Un point de contrôle sans durée : il se pose à la fin d'une tâche.",
+  hint: "Un point de contrôle sans durée : il se pose à la fin d'une phase.",
   fields: [
-    { name: 'nom', label: 'Jalon', kind: 'text', required: true, placeholder: 'Mise en production' },
+    { name: 'nom', label: 'Jalon', kind: 'text', required: true, placeholder: 'Soutenance' },
     { name: 'apres', label: 'À la fin de', kind: 'reference', references: 'taches', required: true },
   ],
-  sample: [{ nom: 'Mise en production', apres: 'Recette' }],
 };
 
+/**
+ * Jours fermés — vide par défaut.
+ *
+ * Une période bornée par deux dates n'est pas déformée par un jour fermé : la
+ * barre est seulement coupée d'une zone grisée, son étendue reste la même.
+ * C'est donc un choix de lecture, pas de calcul, et la présentation la plus
+ * proche d'un planning classique est celle où les barres restent d'un seul
+ * tenant. On les ajoute si l'on veut voir les week-ends.
+ */
 const SECTION_FERMETURES: AssistantSection = {
   id: 'fermetures',
   label: 'Jours non travaillés',
-  hint: 'Un jour de la semaine — samedi, dimanche — ou une date précise au format AAAA-MM-JJ.',
+  hint: 'Facultatif : un jour de la semaine — samedi, dimanche — ou une date précise. Les barres sont alors coupées d’une zone grisée, sans changer de période.',
   fields: [
     { name: 'jour', label: 'Jour', kind: 'text', required: true, placeholder: 'samedi' },
   ],
-  sample: [{ jour: 'samedi' }, { jour: 'dimanche' }],
 };
 
 /**
@@ -117,43 +136,46 @@ const SECTION_FERMETURES: AssistantSection = {
  */
 function construireGantt(title: string, values: SectionValues): string {
   const projet = filledRows(SECTION_PROJET, values)[0];
+
+  // Une phase n'est retenue que si sa période est complète et bien formée :
+  // PlantUML refuse une date approximative, et mieux vaut omettre la ligne que
+  // faire échouer tout le diagramme sur une saisie en cours.
+  const phases = filledRows(SECTION_TACHES, values)
+    .map((phase) => ({
+      nom: nomDeTache(phase.nom ?? ''),
+      debut: (phase.debut ?? '').trim(),
+      fin: (phase.fin ?? '').trim(),
+      avancement: Math.min(100, Math.max(0, nombre(phase.avancement, 0))),
+    }))
+    .filter((phase) => phase.nom !== '' && DATE_ISO.test(phase.debut) && DATE_ISO.test(phase.fin))
+    // Deux dates inversées se lisent sans peine, et PlantUML les refuserait :
+    // on les remet dans l'ordre plutôt que de perdre la ligne.
+    .map((phase) =>
+      phase.fin < phase.debut ? { ...phase, debut: phase.fin, fin: phase.debut } : phase
+    );
+
   const entete: string[] = ['language fr'];
 
   const titre = title.trim() || (projet?.nom ?? '').trim();
   if (titre !== '') entete.push(`title ${titre}`);
 
-  const debut = (projet?.debut ?? '').trim();
-  if (debut !== '') entete.push(`Project starts ${debut}`);
+  // `Project starts` n'est pas décoratif : sans lui, PlantUML refuse toute
+  // tâche datée (« No starting date for the project »). Quand l'utilisateur ne
+  // le renseigne pas, la phase la plus précoce fait office d'origine.
+  const debutSaisi = (projet?.debut ?? '').trim();
+  const debutProjet = DATE_ISO.test(debutSaisi)
+    ? debutSaisi
+    : phases.map((phase) => phase.debut).sort()[0];
+  if (debutProjet !== undefined) entete.push(`Project starts ${debutProjet}`);
 
   const echelle = (projet?.echelle ?? '').trim();
   if (echelle !== '') entete.push(`projectscale ${echelle}`);
 
-  const taches = filledRows(SECTION_TACHES, values);
   const corps: string[] = [];
-  let phaseCourante = '';
 
-  taches.forEach((tache) => {
-    const nom = nomDeTache(tache.nom ?? '');
-    if (nom === '') return;
-
-    // Une phase ouvre un intertitre, et seulement quand elle change : répéter
-    // le séparateur à chaque tâche découperait le diagramme en tranches d'une
-    // ligne.
-    const phase = (tache.phase ?? '').trim();
-    if (phase !== '' && phase !== phaseCourante) {
-      corps.push('', `-- ${phase} --`);
-      phaseCourante = phase;
-    }
-
-    corps.push(`[${nom}] lasts ${nombre(tache.duree, 1)} days`);
-
-    const apres = nomDeTache(tache.apres ?? '');
-    // Une tâche ne peut pas commencer après elle-même : la référence est
-    // sélectionnée dans une liste qui la contient aussi.
-    if (apres !== '' && apres !== nom) corps.push(`[${nom}] starts at [${apres}]'s end`);
-
-    const avancement = Math.min(100, Math.max(0, nombre(tache.avancement, 0)));
-    if (avancement > 0) corps.push(`[${nom}] is ${avancement}% completed`);
+  phases.forEach((phase) => {
+    corps.push(`[${phase.nom}] starts ${phase.debut} and ends ${phase.fin}`);
+    if (phase.avancement > 0) corps.push(`[${phase.nom}] is ${phase.avancement}% completed`);
   });
 
   const jalons = filledRows(SECTION_JALONS, values)

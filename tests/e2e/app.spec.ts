@@ -460,18 +460,22 @@ test('le Gantt se compose au formulaire et se génère', async () => {
 
   await expect(dialogue.locator('.assistant-section legend')).toHaveText([
     'Projet',
-    'Tâches',
+    'Phases',
     'Jalons',
     'Jours non travaillés',
   ]);
 
-  // Une tâche ajoutée s'enchaîne à la fin d'une autre, choisie dans la liste.
-  const taches = dialogue.locator('.assistant-section', { hasText: 'Tâches' }).first();
-  await taches.getByRole('button', { name: /Ajouter/ }).click();
-  const nouvelle = taches.locator('.assistant-ligne').last();
-  await nouvelle.locator('input').nth(0).fill('Bascule');
-  await nouvelle.locator('input').nth(2).fill('4');
-  await nouvelle.locator('select').selectOption('Recette');
+  // Les phases sont déjà nommées : il ne reste que les périodes à changer.
+  const phases = dialogue.locator('.assistant-section', { hasText: 'Phases' }).first();
+  await expect(phases.locator('.assistant-ligne')).toHaveCount(8);
+  await expect(phases.locator('.assistant-ligne').first().locator('input').first()).toHaveValue(
+    "Phase d'insertion"
+  );
+
+  // On ne retouche qu'une période, comme le ferait l'utilisateur.
+  const analyse = phases.locator('.assistant-ligne').nth(3);
+  await analyse.locator('input').nth(1).fill('2024-03-04');
+  await analyse.locator('input').nth(2).fill('2024-03-22');
 
   const apercu = dialogue.locator('.assistant-apercu pre');
   const source = (await apercu.textContent()) ?? '';
@@ -480,17 +484,19 @@ test('le Gantt se compose au formulaire et se génère', async () => {
   expect(source.startsWith('@startgantt')).toBe(true);
   expect(source).not.toContain('@startuml');
   expect(source).toContain('title Planning de la refonte');
-  expect(source).toContain('Project starts 2026-09-01');
-  expect(source).toContain("[Bascule] starts at [Recette]'s end");
-  // Le formulaire est en français, la syntaxe produite est anglaise.
-  expect(source).toContain('saturday are closed');
+  expect(source).toContain('[Analyse du projet] starts 2024-03-04 and ends 2024-03-22');
+  // La date de projet, laissée vide, est prise sur la phase la plus précoce.
+  expect(source).toContain('Project starts 2023-07-03');
+  // Deux phases se chevauchent sans qu'aucun enchaînement soit écrit.
+  expect(source).toContain('[Rédaction du rapport] starts 2023-08-29 and ends 2023-09-29');
+  expect(source).not.toContain('starts at');
 
   await dialogue.locator('button', { hasText: /^Créer le diagramme$/ }).click();
   await expect(dialogue).toHaveCount(0);
 
   // Le moteur le rend comme n'importe quel autre diagramme.
   await expect(window.locator('.preview-stage svg')).toBeVisible({ timeout: 30_000 });
-  await expect(window.locator('.preview-stage svg')).toContainText('Bascule');
+  await expect(window.locator('.preview-stage svg')).toContainText('Analyse du projet');
   await expect(window.locator('.error-panel')).toHaveCount(0);
 });
 

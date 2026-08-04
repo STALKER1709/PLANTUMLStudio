@@ -1,4 +1,4 @@
-' Diagramme de Gantt — planification des tâches dans le temps
+' Diagramme de Gantt — planification des phases dans le temps
 ' @categorie planification
 '
 ' ATTENTION : le Gantt ne fait PAS partie d'UML. Il ne figure pas parmi les
@@ -7,15 +7,18 @@
 '
 ' Deux différences avec les autres modèles :
 '   — l'encadrement est @startgantt / @endgantt, et non @startuml ;
-'   — les mots-clefs sont anglais (lasts, starts at, are closed), même si
+'   — les mots-clefs sont anglais (starts, ends, are closed), même si
 '     « language fr » francise les noms de mois et de jours affichés.
+'
+' Les phases ci-dessous sont celles d'un projet de fin d'études, dans leur
+' ordre habituel. Il n'y a normalement que les dates à changer.
 @startgantt
 language fr
-title Refonte du portail — planning prévisionnel
+title Projet de fin d'études
 
 ' Le formalisme commun ne s'applique ici qu'en partie : un Gantt n'a ni
-' « element » ni « arrow ». Seuls la police et le fond sont repris ; les
-' couleurs des tâches se donnent une par une, avec « is colored in ».
+' « element » ni « arrow ». Seuls la police et le fond sont repris ; la
+' couleur d'une barre se donne au cas par cas, avec « is colored in ».
 <style>
 root {
   FontName "Segoe UI"
@@ -25,44 +28,38 @@ root {
 </style>
 
 ' ── Cadre temporel ───────────────────────────────────────────────────
-' La date d'ancrage s'écrit AAAA-MM-JJ. L'échelle change la graduation de
-' l'axe : daily, weekly ou monthly.
-Project starts 2026-09-01
+' « Project starts » est OBLIGATOIRE dès qu'une phase porte des dates :
+' sans lui, PlantUML refuse le diagramme (« No starting date for the
+' project »). La valeur est celle de la phase la plus précoce.
+' « projectscale » change la graduation de l'axe : daily, weekly, monthly.
+Project starts 2023-07-03
 projectscale weekly
 
 ' ── Phases ───────────────────────────────────────────────────────────
-' « -- Titre -- » ouvre un intertitre qui regroupe les tâches suivantes.
--- Étude --
+' Une période se borne par ses deux dates, au format AAAA-MM-JJ. C'est ce
+' qui permet à deux phases de se chevaucher — voir la rédaction du rapport,
+' menée en parallèle de la réalisation et des tests.
+[Phase d'insertion] starts 2023-07-03 and ends 2023-07-20
+[Étude de l'existant] starts 2023-07-21 and ends 2023-07-31
+[Rédaction du cahier des charges] starts 2023-08-01 and ends 2023-08-09
+[Analyse du projet] starts 2023-08-10 and ends 2023-08-25
+[Conception du projet] starts 2023-08-28 and ends 2023-09-05
+[Réalisation et déploiement] starts 2023-09-06 and ends 2023-09-21
+[Tests et fonctionnalités] starts 2023-09-22 and ends 2023-09-28
+[Rédaction du rapport] starts 2023-08-29 and ends 2023-09-29
 
-' Une tâche se déclare par sa durée. Sans « starts at », elle commence au
-' premier jour du projet.
-[Cadrage] lasts 10 days
-[Cadrage] is 100% completed
-[Cadrage] is colored in #D9F6FB/#1E90FF
-
-' L'enchaînement se lit « commence à la fin de » : c'est lui qui construit
-' le chemin, plutôt que des dates saisies une à une.
-[Conception] lasts 15 days
-[Conception] starts at [Cadrage]'s end
-[Conception] is 40% completed
-
--- Construction --
-
-[Réalisation] lasts 30 days
-[Réalisation] starts at [Conception]'s end
-
-[Recette] lasts 10 days
-[Recette] starts at [Réalisation]'s end
-
-' ── Jalon ────────────────────────────────────────────────────────────
-' Un jalon n'a pas de durée : il marque un point de contrôle, ici la fin
-' de la recette.
-[Mise en production] happens at [Recette]'s end
-
-' ── Jours non travaillés ─────────────────────────────────────────────
-' Les jours fermés sont retirés du calcul : une tâche de 10 jours posée un
-' jeudi finit le jeudi suivant, week-ends déduits.
-saturday are closed
-sunday are closed
-2026-12-25 is closed
+' ── Pour aller plus loin ─────────────────────────────────────────────
+' Avancement d'une phase, qui la hachure partiellement :
+'   [Analyse du projet] is 40% completed
+'
+' Jalon — un point de contrôle sans durée, posé à la fin d'une phase :
+'   [Soutenance] happens at [Rédaction du rapport]'s end
+'
+' Couleur d'une barre, fond puis bordure :
+'   [Analyse du projet] is colored in #D9F6FB/#1E90FF
+'
+' Jours non travaillés. Sur une période bornée par deux dates, ils ne
+' déplacent rien : la barre est seulement coupée d'une zone grisée.
+'   saturday are closed
+'   2023-08-15 is closed
 @endgantt

@@ -41,11 +41,12 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - Export PNG / SVG / PDF d'un diagramme, ou du projet entier en archive ZIP
 - **Les 14 diagrammes UML 2.5**, chacun livré comme modèle commenté en français, suivant un
   formalisme documenté ([`docs/formalisme.md`](docs/formalisme.md))
-- **Diagramme de Gantt** — planification des tâches dans le temps : phases, enchaînements
-  (« commence à la fin de »), jalons, avancement et jours non travaillés. Le formulaire est en
-  français et la syntaxe anglaise de PlantUML est écrite pour vous : on saisit « samedi », la
-  source porte `saturday are closed`. **Le Gantt n'est pas un diagramme UML** — il ne figure
-  pas dans la norme 2.5 — et il est rangé dans sa propre famille, « Planification (hors UML) »
+- **Diagramme de Gantt** — le formulaire s'ouvre avec les **huit phases d'un projet de fin
+  d'études déjà nommées** ; il ne reste qu'à renseigner les périodes. Chaque phase se borne par
+  deux dates plutôt que par une durée, ce qui laisse deux phases **se chevaucher** — la
+  rédaction du rapport court en parallèle de la réalisation. Jalons, avancement et jours non
+  travaillés en option. **Le Gantt n'est pas un diagramme UML** — il ne figure pas dans la
+  norme 2.5 — et il est rangé dans sa propre famille, « Planification (hors UML) »
   ([`docs/gantt.md`](docs/gantt.md))
 - Formalisme **appliqué automatiquement à toute source**, y compris écrite à la main : aucune
   ligne de `skinparam` à recopier, et une bascule pour revenir au rendu PlantUML par défaut

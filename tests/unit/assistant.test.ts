@@ -337,103 +337,114 @@ describe('Diagramme de Gantt', () => {
   const schema = schemaById('15-diagramme-gantt');
   if (!schema) throw new Error('schéma introuvable');
 
-  /** Formulaire minimal : deux tâches enchaînées. */
-  const deuxTaches = {
-    projet: [{ nom: 'Refonte', debut: '2026-09-01', echelle: 'weekly' }],
+  /** Formulaire minimal : deux phases bornées par leurs dates. */
+  const deuxPhases = {
+    projet: [{ nom: 'Projet', debut: '', echelle: 'weekly' }],
     taches: [
-      { nom: 'Cadrage', phase: '', duree: '10', apres: '', avancement: '' },
-      { nom: 'Conception', phase: '', duree: '15', apres: 'Cadrage', avancement: '' },
+      { nom: 'Analyse', debut: '2023-08-10', fin: '2023-08-25', avancement: '' },
+      { nom: 'Conception', debut: '2023-08-28', fin: '2023-09-05', avancement: '' },
     ],
     jalons: [],
     fermetures: [],
   };
 
   it('encadre par @startgantt et non par @startuml', () => {
-    const source = schema.build('', deuxTaches);
+    const source = schema.build('', deuxPhases);
 
     expect(source.startsWith('@startgantt')).toBe(true);
     expect(source.trimEnd().endsWith('@endgantt')).toBe(true);
     expect(source).not.toContain('@startuml');
   });
 
-  it('pose le cadre temporel avant les tâches', () => {
-    const source = schema.build('Refonte', deuxTaches);
+  it('borne chaque phase par ses deux dates', () => {
+    const source = schema.build('', deuxPhases);
 
-    expect(source).toContain('Project starts 2026-09-01');
-    expect(source).toContain('projectscale weekly');
-    // « language fr » francise les noms de mois affichés sur l'axe.
-    expect(source).toContain('language fr');
-    expect(source.indexOf('Project starts')).toBeLessThan(source.indexOf('[Cadrage]'));
+    expect(source).toContain('[Analyse] starts 2023-08-10 and ends 2023-08-25');
+    expect(source).toContain('[Conception] starts 2023-08-28 and ends 2023-09-05');
   });
 
-  it('enchaîne une tâche à la fin de la précédente', () => {
-    const source = schema.build('', deuxTaches);
-
-    expect(source).toContain('[Cadrage] lasts 10 days');
-    expect(source).toContain("[Conception] starts at [Cadrage]'s end");
-    // Sans « commence après », la tâche démarre au début du projet.
-    expect(source).not.toContain("[Cadrage] starts at");
-  });
-
-  it('n’enchaîne pas une tâche à elle-même', () => {
+  it('prend la phase la plus précoce comme origine, à défaut de date de projet', () => {
+    // « Project starts » est obligatoire dès qu'une phase porte des dates :
+    // sans lui, PlantUML refuse le diagramme.
     const source = schema.build('', {
-      ...deuxTaches,
-      taches: [{ nom: 'Cadrage', phase: '', duree: '10', apres: 'Cadrage', avancement: '' }],
-    });
-
-    expect(source).not.toContain("[Cadrage] starts at [Cadrage]'s end");
-  });
-
-  it('n’ouvre un intertitre qu’au changement de phase', () => {
-    const source = schema.build('', {
-      ...deuxTaches,
+      ...deuxPhases,
       taches: [
-        { nom: 'A', phase: 'Étude', duree: '5', apres: '', avancement: '' },
-        { nom: 'B', phase: 'Étude', duree: '5', apres: '', avancement: '' },
-        { nom: 'C', phase: 'Construction', duree: '5', apres: '', avancement: '' },
+        { nom: 'Rapport', debut: '2023-08-29', fin: '2023-09-29', avancement: '' },
+        { nom: 'Insertion', debut: '2023-07-03', fin: '2023-07-20', avancement: '' },
       ],
     });
 
-    expect(source.match(/^-- .+ --$/gm)).toEqual(['-- Étude --', '-- Construction --']);
+    expect(source).toContain('Project starts 2023-07-03');
   });
 
-  it('traduit les jours français en mots-clefs PlantUML', () => {
+  it('respecte la date de projet quand elle est saisie', () => {
     const source = schema.build('', {
-      ...deuxTaches,
-      fermetures: [{ jour: 'samedi' }, { jour: 'Dimanche' }, { jour: '2026-12-25' }],
+      ...deuxPhases,
+      projet: [{ nom: 'Projet', debut: '2023-01-01', echelle: 'weekly' }],
     });
 
-    expect(source).toContain('saturday are closed');
-    expect(source).toContain('sunday are closed');
-    expect(source).toContain('2026-12-25 is closed');
+    expect(source).toContain('Project starts 2023-01-01');
   });
 
-  it('ignore une fermeture qu’il ne sait pas traduire', () => {
-    const source = schema.build('', {
-      ...deuxTaches,
-      fermetures: [{ jour: 'le pont de mai' }],
-    });
+  it('pose le cadre temporel avant les phases', () => {
+    const source = schema.build('Planning', deuxPhases);
 
-    // Mieux vaut ne rien écrire qu'une ligne que PlantUML refusera.
-    expect(source).not.toContain('pont de mai');
+    expect(source).toContain('title Planning');
+    expect(source).toContain('projectscale weekly');
+    // « language fr » francise les noms de mois portés par l'axe.
+    expect(source).toContain('language fr');
+    expect(source.indexOf('Project starts')).toBeLessThan(source.indexOf('[Analyse]'));
   });
 
-  it('pose un jalon à la fin d’une tâche', () => {
+  it('laisse deux phases se chevaucher', () => {
     const source = schema.build('', {
-      ...deuxTaches,
-      jalons: [{ nom: 'Mise en production', apres: 'Conception' }],
+      ...deuxPhases,
+      taches: [
+        { nom: 'Réalisation', debut: '2023-09-06', fin: '2023-09-21', avancement: '' },
+        { nom: 'Rapport', debut: '2023-08-29', fin: '2023-09-29', avancement: '' },
+      ],
     });
 
-    expect(source).toContain("[Mise en production] happens at [Conception]'s end");
+    // Aucune contrainte d'enchaînement n'est écrite : les périodes se
+    // recouvrent telles qu'elles ont été saisies.
+    expect(source).toContain('[Réalisation] starts 2023-09-06 and ends 2023-09-21');
+    expect(source).toContain('[Rapport] starts 2023-08-29 and ends 2023-09-29');
+    expect(source).not.toContain('starts at');
+  });
+
+  it('remet dans l’ordre deux dates inversées', () => {
+    const source = schema.build('', {
+      ...deuxPhases,
+      taches: [{ nom: 'Analyse', debut: '2023-08-25', fin: '2023-08-10', avancement: '' }],
+    });
+
+    expect(source).toContain('[Analyse] starts 2023-08-10 and ends 2023-08-25');
+  });
+
+  it('écarte une phase dont la période est incomplète ou mal formée', () => {
+    const source = schema.build('', {
+      ...deuxPhases,
+      taches: [
+        { nom: 'Sans fin', debut: '2023-08-10', fin: '', avancement: '' },
+        { nom: 'Mal datée', debut: '10/08/2023', fin: '25/08/2023', avancement: '' },
+        { nom: 'Correcte', debut: '2023-08-10', fin: '2023-08-25', avancement: '' },
+      ],
+    });
+
+    // Mieux vaut omettre la ligne que faire échouer tout le diagramme sur une
+    // saisie en cours de frappe.
+    expect(source).not.toContain('Sans fin');
+    expect(source).not.toContain('Mal datée');
+    expect(source).toContain('[Correcte] starts 2023-08-10');
   });
 
   it('borne l’avancement et l’omet quand il est nul', () => {
     const source = schema.build('', {
-      ...deuxTaches,
+      ...deuxPhases,
       taches: [
-        { nom: 'A', phase: '', duree: '5', apres: '', avancement: '0' },
-        { nom: 'B', phase: '', duree: '5', apres: '', avancement: '250' },
-        { nom: 'C', phase: '', duree: '5', apres: '', avancement: '40 %' },
+        { nom: 'A', debut: '2023-08-01', fin: '2023-08-02', avancement: '0' },
+        { nom: 'B', debut: '2023-08-01', fin: '2023-08-02', avancement: '250' },
+        { nom: 'C', debut: '2023-08-01', fin: '2023-08-02', avancement: '40 %' },
       ],
     });
 
@@ -442,31 +453,62 @@ describe('Diagramme de Gantt', () => {
     expect(source).toContain('[C] is 40% completed');
   });
 
-  it('tire un nombre de jours d’une durée écrite en toutes lettres', () => {
+  it('traduit les jours français en mots-clefs PlantUML', () => {
     const source = schema.build('', {
-      ...deuxTaches,
-      taches: [{ nom: 'A', phase: '', duree: '12 jours', apres: '', avancement: '' }],
+      ...deuxPhases,
+      fermetures: [{ jour: 'samedi' }, { jour: 'Dimanche' }, { jour: '2023-08-15' }],
     });
 
-    expect(source).toContain('[A] lasts 12 days');
+    expect(source).toContain('saturday are closed');
+    expect(source).toContain('sunday are closed');
+    expect(source).toContain('2023-08-15 is closed');
   });
 
-  it('neutralise les crochets d’un nom de tâche', () => {
+  it('ignore une fermeture qu’il ne sait pas traduire', () => {
     const source = schema.build('', {
-      ...deuxTaches,
-      taches: [{ nom: 'Étude [phase 1]', phase: '', duree: '5', apres: '', avancement: '' }],
+      ...deuxPhases,
+      fermetures: [{ jour: 'le pont de mai' }],
     });
 
-    // Un crochet fermerait la référence au milieu.
-    expect(source).toContain('[Étude phase 1] lasts 5 days');
+    expect(source).not.toContain('pont de mai');
   });
 
-  it('ignore une tâche sans durée, faute de champ requis', () => {
+  it('pose un jalon à la fin d’une phase', () => {
     const source = schema.build('', {
-      ...deuxTaches,
-      taches: [{ nom: 'Sans durée', phase: '', duree: '', apres: '', avancement: '' }],
+      ...deuxPhases,
+      jalons: [{ nom: 'Soutenance', apres: 'Conception' }],
     });
 
-    expect(source).not.toContain('Sans durée');
+    expect(source).toContain("[Soutenance] happens at [Conception]'s end");
+  });
+
+  it('neutralise les crochets d’un nom de phase', () => {
+    const source = schema.build('', {
+      ...deuxPhases,
+      taches: [{ nom: 'Étude [phase 1]', debut: '2023-08-01', fin: '2023-08-02', avancement: '' }],
+    });
+
+    expect(source).toContain('[Étude phase 1] starts 2023-08-01');
+  });
+
+  it('livre les phases d’un projet de fin d’études, prêtes à dater', () => {
+    const phases = schema.sections.find((section) => section.id === 'taches')?.sample ?? [];
+
+    expect(phases).toHaveLength(8);
+    expect(phases.map((phase) => phase.nom)).toEqual([
+      "Phase d'insertion",
+      "Étude de l'existant",
+      'Rédaction du cahier des charges',
+      'Analyse du projet',
+      'Conception du projet',
+      'Réalisation et déploiement',
+      'Tests et fonctionnalités',
+      'Rédaction du rapport',
+    ]);
+    // Chacune arrive avec une période d'exemple, à remplacer par la sienne.
+    phases.forEach((phase) => {
+      expect(phase.debut, phase.nom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(phase.fin, phase.nom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
   });
 });
