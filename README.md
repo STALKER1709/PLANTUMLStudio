@@ -44,9 +44,10 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 - **Diagramme de Gantt** — le formulaire s'ouvre avec les **huit phases d'un projet de fin
   d'études déjà nommées** ; il ne reste qu'à renseigner les périodes. Chaque phase se borne par
   deux dates plutôt que par une durée, ce qui laisse deux phases **se chevaucher** — la
-  rédaction du rapport court en parallèle de la réalisation. Jalons, avancement et jours non
-  travaillés en option. **Le Gantt n'est pas un diagramme UML** — il ne figure pas dans la
-  norme 2.5 — et il est rangé dans sa propre famille, « Planification (hors UML) »
+  rédaction du rapport court en parallèle de la réalisation — chacune recevant **sa propre
+  couleur**, sans rien à saisir. Jalons, avancement et jours non travaillés en option. **Le
+  Gantt n'est pas un diagramme UML** — il ne figure pas dans la norme 2.5 — et il est rangé
+  dans sa propre famille, « Planification (hors UML) »
   ([`docs/gantt.md`](docs/gantt.md))
 - Formalisme **appliqué automatiquement à toute source**, y compris écrite à la main : aucune
   ligne de `skinparam` à recopier, et une bascule pour revenir au rendu PlantUML par défaut

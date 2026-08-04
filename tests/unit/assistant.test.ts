@@ -438,6 +438,45 @@ describe('Diagramme de Gantt', () => {
     expect(source).toContain('[Correcte] starts 2023-08-10');
   });
 
+  it('donne une couleur différente à chaque phase', () => {
+    const source = schema.build('', deuxPhases);
+
+    expect(source).toContain('[Analyse] is colored in #CFE3FB/#1E6FD9');
+    expect(source).toContain('[Conception] is colored in #FBD5CF/#D9542E');
+  });
+
+  it('n’attribue jamais deux fois la même couleur dans une même palette', () => {
+    const source = schema.build('', {
+      ...deuxPhases,
+      taches: Array.from({ length: 8 }, (_, rang) => ({
+        nom: `P${rang}`,
+        debut: '2023-08-01',
+        fin: '2023-08-02',
+        avancement: '',
+      })),
+    });
+
+    const couleurs = source.match(/is colored in (\S+)/g) ?? [];
+    expect(couleurs).toHaveLength(8);
+    expect(new Set(couleurs).size).toBe(8);
+  });
+
+  it('reprend la palette au début au-delà de sa longueur', () => {
+    const source = schema.build('', {
+      ...deuxPhases,
+      taches: Array.from({ length: 9 }, (_, rang) => ({
+        nom: `P${rang}`,
+        debut: '2023-08-01',
+        fin: '2023-08-02',
+        avancement: '',
+      })),
+    });
+
+    // Des teintes répétées valent mieux que des couleurs tirées au hasard.
+    expect(source).toContain('[P0] is colored in #CFE3FB/#1E6FD9');
+    expect(source).toContain('[P8] is colored in #CFE3FB/#1E6FD9');
+  });
+
   it('borne l’avancement et l’omet quand il est nul', () => {
     const source = schema.build('', {
       ...deuxPhases,
@@ -448,7 +487,7 @@ describe('Diagramme de Gantt', () => {
       ],
     });
 
-    expect(source).not.toContain('[A] is');
+    expect(source).not.toMatch(/\[A\] is \d+% completed/);
     expect(source).toContain('[B] is 100% completed');
     expect(source).toContain('[C] is 40% completed');
   });

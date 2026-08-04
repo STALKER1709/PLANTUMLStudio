@@ -17,8 +17,8 @@ language fr
 title Projet de fin d'études
 
 ' Le formalisme commun ne s'applique ici qu'en partie : un Gantt n'a ni
-' « element » ni « arrow ». Seuls la police et le fond sont repris ; la
-' couleur d'une barre se donne au cas par cas, avec « is colored in ».
+' « element » ni « arrow ». Seuls la police et le fond sont repris ; chaque
+' barre reçoit sa propre teinte, donnée ligne à ligne plus bas.
 <style>
 root {
   FontName "Segoe UI"
@@ -39,14 +39,32 @@ projectscale weekly
 ' Une période se borne par ses deux dates, au format AAAA-MM-JJ. C'est ce
 ' qui permet à deux phases de se chevaucher — voir la rédaction du rapport,
 ' menée en parallèle de la réalisation et des tests.
+' Une couleur par phase, fond puis bordure. Sur un planning où les barres se
+' chevauchent, c'est ce qui permet de suivre une phase des yeux d'un bout à
+' l'autre de l'axe.
 [Phase d'insertion] starts 2023-07-03 and ends 2023-07-20
+[Phase d'insertion] is colored in #CFE3FB/#1E6FD9
+
 [Étude de l'existant] starts 2023-07-21 and ends 2023-07-31
+[Étude de l'existant] is colored in #FBD5CF/#D9542E
+
 [Rédaction du cahier des charges] starts 2023-08-01 and ends 2023-08-09
+[Rédaction du cahier des charges] is colored in #CFF0D5/#2E9E4F
+
 [Analyse du projet] starts 2023-08-10 and ends 2023-08-25
+[Analyse du projet] is colored in #E0D2F2/#7A4CC0
+
 [Conception du projet] starts 2023-08-28 and ends 2023-09-05
+[Conception du projet] is colored in #F8D0EC/#C43C9B
+
 [Réalisation et déploiement] starts 2023-09-06 and ends 2023-09-21
+[Réalisation et déploiement] is colored in #D2E7EF/#3A87A8
+
 [Tests et fonctionnalités] starts 2023-09-22 and ends 2023-09-28
+[Tests et fonctionnalités] is colored in #F7EFC0/#C9A227
+
 [Rédaction du rapport] starts 2023-08-29 and ends 2023-09-29
+[Rédaction du rapport] is colored in #F9D7D7/#D96A6A
 
 ' ── Pour aller plus loin ─────────────────────────────────────────────
 ' Avancement d'une phase, qui la hachure partiellement :
@@ -54,9 +72,6 @@ projectscale weekly
 '
 ' Jalon — un point de contrôle sans durée, posé à la fin d'une phase :
 '   [Soutenance] happens at [Rédaction du rapport]'s end
-'
-' Couleur d'une barre, fond puis bordure :
-'   [Analyse du projet] is colored in #D9F6FB/#1E90FF
 '
 ' Jours non travaillés. Sur une période bornée par deux dates, ils ne
 ' déplacent rien : la barre est seulement coupée d'une zone grisée.

@@ -33,6 +33,31 @@ const JOURS = new Map<string, string>([
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * Couleurs des barres, attribuées dans l'ordre des phases.
+ *
+ * Une teinte par phase plutôt qu'une seule pour tout le planning : sur un
+ * diagramme où les barres se chevauchent, la couleur est ce qui permet de
+ * suivre une phase des yeux d'un bout à l'autre de l'axe.
+ *
+ * Chaque entrée donne le fond puis la bordure — la bordure est la même teinte
+ * assombrie, pour que la barre reste lisible sur fond blanc sans que le libellé
+ * écrit par-dessus devienne difficile à lire.
+ *
+ * La liste est parcourue en boucle : au-delà de huit phases, les couleurs se
+ * répètent, ce qui reste préférable à des teintes calculées au hasard.
+ */
+const COULEURS: ReadonlyArray<{ fond: string; bordure: string }> = [
+  { fond: '#CFE3FB', bordure: '#1E6FD9' },
+  { fond: '#FBD5CF', bordure: '#D9542E' },
+  { fond: '#CFF0D5', bordure: '#2E9E4F' },
+  { fond: '#E0D2F2', bordure: '#7A4CC0' },
+  { fond: '#F8D0EC', bordure: '#C43C9B' },
+  { fond: '#D2E7EF', bordure: '#3A87A8' },
+  { fond: '#F7EFC0', bordure: '#C9A227' },
+  { fond: '#F9D7D7', bordure: '#D96A6A' },
+];
+
+/**
  * Nom utilisable entre crochets.
  *
  * Un crochet dans un nom de tâche fermerait la référence au milieu et casserait
@@ -173,8 +198,10 @@ function construireGantt(title: string, values: SectionValues): string {
 
   const corps: string[] = [];
 
-  phases.forEach((phase) => {
+  phases.forEach((phase, rang) => {
+    const couleur = COULEURS[rang % COULEURS.length];
     corps.push(`[${phase.nom}] starts ${phase.debut} and ends ${phase.fin}`);
+    corps.push(`[${phase.nom}] is colored in ${couleur.fond}/${couleur.bordure}`);
     if (phase.avancement > 0) corps.push(`[${phase.nom}] is ${phase.avancement}% completed`);
   });
 
