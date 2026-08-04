@@ -7,13 +7,6 @@ Electron + React + TypeScript, moteur `plantuml.jar` exécuté localement.
 
 ## Fonctionnalités
 
-- **Analyse d'une description textuelle** : décrivez le système en français ou en anglais, et
-  l'application en tire les acteurs, leurs cas d'utilisation, les généralisations et les
-  relations `include` / `extend`. Chaque élément trouvé montre **la phrase et la ligne qui
-  l'ont produit**, les phrases dont rien n'a été tiré restent affichées, et le résultat ouvre
-  le formulaire de l'assistant : l'analyse propose, elle n'écrit rien sans validation. Aucun
-  modèle de langue, aucun réseau — une reconnaissance de tournures, dont les limites sont
-  documentées ([`docs/analyse-textuelle.md`](docs/analyse-textuelle.md))
 - **Assistant de création** : un formulaire par type de diagramme — acteurs, classes, messages,
   relations — dont l'application écrit la source PlantUML. Les 14 types sont couverts, aucune
   syntaxe à connaître, et l'aperçu de la source se met à jour à chaque frappe. Le diagramme de
@@ -166,11 +159,9 @@ est refusée si elle sort du dossier du projet ouvert (`FileService.isWithin`).
 ## Structure du projet
 
 ```
-docs/formalisme.md         référence du formalisme appliqué aux 14 diagrammes
-docs/analyse-textuelle.md  tournures reconnues, limites, qualité mesurée
+docs/formalisme.md  référence du formalisme appliqué aux 14 diagrammes
 src/
   main/          processus principal (services, IPC, fenêtre, logger)
-  renderer/analyze/   analyse d'une description textuelle (motifs FR et EN)
   preload/       pont contextBridge (sandboxé, sans import relatif)
   renderer/      application React (composants, stores Zustand, hooks, i18n, styles)
   shared/        types et constantes communs — sans dépendance Electron ni Node

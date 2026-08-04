@@ -7,8 +7,6 @@ import { useProjectStore } from '../../store/projectStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useToastStore } from '../../store/toastStore';
 import { svgToPngBase64 } from '../../utils/rasterize';
-import type { AssistantPrefill } from '../../analyze/toAssistant';
-import { AnalyzeDialog } from '../assistant/AnalyzeDialog';
 import { AssistantDialog } from '../assistant/AssistantDialog';
 import { DeriveDialog } from '../assistant/DeriveDialog';
 import { DiagramTypeSelector } from '../common/DiagramTypeSelector';
@@ -19,15 +17,6 @@ export function Toolbar() {
   const { t } = useTranslation();
   const [assistantOuvert, setAssistantOuvert] = useState(false);
   const [derivationOuverte, setDerivationOuverte] = useState(false);
-  const [analyseOuverte, setAnalyseOuverte] = useState(false);
-  /**
-   * Formulaire déduit d'une analyse, et le compteur qui remonte l'assistant.
-   *
-   * Sans ce compteur, rouvrir l'assistant après une seconde analyse garderait
-   * l'état de la première : le composant ne lit ses valeurs qu'au montage.
-   */
-  const [prefill, setPrefill] = useState<AssistantPrefill | null>(null);
-  const [generation, setGeneration] = useState(0);
 
   const project = useProjectStore((state) => state.project);
   const openProject = useProjectStore((state) => state.openProject);
@@ -183,20 +172,8 @@ export function Toolbar() {
       <span className="group">
         {/* L'assistant écrit la source à partir d'un formulaire : il évite
             d'avoir à connaître la syntaxe PlantUML. */}
-        <button
-          type="button"
-          onClick={() => {
-            setPrefill(null);
-            setGeneration((precedent) => precedent + 1);
-            setAssistantOuvert(true);
-          }}
-        >
+        <button type="button" onClick={() => setAssistantOuvert(true)}>
           {t('assistant.open')}
-        </button>
-        {/* En amont de l'assistant : une description en français ou en anglais,
-            dont on tire les acteurs et leurs cas — à valider dans le formulaire. */}
-        <button type="button" title={t('analyze.hint')} onClick={() => setAnalyseOuverte(true)}>
-          {t('analyze.open')}
         </button>
         {/* Dérive séquences, communications et classes d'analyse depuis le
             diagramme de cas d'utilisation ouvert. */}
@@ -259,22 +236,9 @@ export function Toolbar() {
         }}
       />
 
-      <AnalyzeDialog
-        open={analyseOuverte}
-        onCancel={() => setAnalyseOuverte(false)}
-        onOpenAssistant={(depuisLeTexte) => {
-          setPrefill(depuisLeTexte);
-          setGeneration((precedent) => precedent + 1);
-          setAnalyseOuverte(false);
-          setAssistantOuvert(true);
-        }}
-      />
-
       <AssistantDialog
-        key={generation}
         open={assistantOuvert}
         isDirty={isDirty}
-        prefill={prefill}
         onCancel={() => setAssistantOuvert(false)}
         onInsert={(source) => {
           setContent(source);

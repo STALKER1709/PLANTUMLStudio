@@ -4,10 +4,8 @@ import {
   SCHEMAS,
   emptyRow,
   initialValues,
-  schemaById,
   type SectionValues,
 } from '../../assistant/schemas';
-import type { AssistantPrefill } from '../../analyze/toAssistant';
 import {
   referencedLabels,
   type AssistantField,
@@ -19,15 +17,6 @@ export interface AssistantDialogProps {
   open: boolean;
   /** `true` si l'éditeur contient des modifications non enregistrées. */
   isDirty: boolean;
-  /**
-   * Formulaire pré-rempli par l'analyse d'une description textuelle.
-   *
-   * Le composant lit cette valeur **à l'initialisation seulement** : l'appelant
-   * lui donne une `key` qui change à chaque analyse, ce qui le remonte avec les
-   * nouvelles valeurs sans avoir à synchroniser un état déjà modifié par
-   * l'utilisateur.
-   */
-  prefill?: AssistantPrefill | null;
   onInsert(source: string): void;
   onCancel(): void;
 }
@@ -41,22 +30,11 @@ export interface AssistantDialogProps {
  * chaque frappe : on voit ce que produit ce qu'on saisit, ce qui fait de
  * l'assistant un moyen d'apprendre la syntaxe autant que de s'en passer.
  */
-export function AssistantDialog({
-  open,
-  isDirty,
-  prefill,
-  onInsert,
-  onCancel,
-}: AssistantDialogProps) {
+export function AssistantDialog({ open, isDirty, onInsert, onCancel }: AssistantDialogProps) {
   const { t } = useTranslation();
-  const [schemaId, setSchemaId] = useState(prefill?.schemaId ?? SCHEMAS[0].id);
-  const [titre, setTitre] = useState(prefill?.titre ?? '');
-  const [valeurs, setValeurs] = useState<SectionValues>(() => {
-    const depart = schemaById(prefill?.schemaId ?? SCHEMAS[0].id) ?? SCHEMAS[0];
-    // Les sections que l'analyse ne renseigne pas gardent leurs lignes de
-    // départ : le formulaire ne doit jamais s'ouvrir sur une section sans ligne.
-    return prefill ? { ...initialValues(depart), ...prefill.valeurs } : initialValues(depart);
-  });
+  const [schemaId, setSchemaId] = useState(SCHEMAS[0].id);
+  const [titre, setTitre] = useState('');
+  const [valeurs, setValeurs] = useState<SectionValues>(() => initialValues(SCHEMAS[0]));
 
   const schema = useMemo(
     () => SCHEMAS.find((candidat) => candidat.id === schemaId) ?? SCHEMAS[0],

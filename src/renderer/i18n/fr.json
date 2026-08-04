@@ -1,6 +1,7 @@
 {
   "app.title": "PlantUML Studio",
   "app.subtitle": "Éditeur UML 100 % hors ligne",
+
   "toolbar.openProject": "Ouvrir un projet",
   "toolbar.createProject": "Nouveau projet",
   "toolbar.newFile": "Nouveau diagramme",
@@ -21,6 +22,7 @@
   "template.category.structurel": "Diagrammes structurels",
   "template.category.comportemental": "Diagrammes comportementaux",
   "toolbar.noFile": "Aucun fichier ouvert",
+
   "assistant.open": "Assistant",
   "assistant.title": "Assistant de création de diagramme",
   "assistant.type": "Type de diagramme",
@@ -30,6 +32,7 @@
   "assistant.removeRow": "Supprimer cette ligne",
   "assistant.insert": "Créer le diagramme",
   "assistant.willReplace": "Le contenu actuel de l'éditeur sera remplacé.",
+
   "derive.open": "Dériver",
   "derive.hint": "Produire séquences, communications et classes d'analyse à partir du diagramme de cas d'utilisation ouvert.",
   "derive.title": "Dériver depuis le diagramme de cas d'utilisation",
@@ -42,9 +45,11 @@
   "derive.needProject": "Ouvrez un projet pour enregistrer plusieurs fichiers.",
   "derive.saved": "{count} diagrammes dérivés enregistrés dans le projet.",
   "derive.savedPartly": "{count} diagrammes enregistrés ; échec pour : {failed}",
+
   "panel.files": "Fichiers",
   "panel.editor": "Éditeur",
   "panel.preview": "Prévisualisation",
+
   "filetree.empty": "Aucun projet ouvert. Utilisez « Ouvrir un projet » pour choisir un dossier contenant vos fichiers .puml.",
   "filetree.refresh": "Actualiser",
   "filetree.newFile": "Nouveau fichier",
@@ -53,6 +58,7 @@
   "filetree.promptNewFile": "Nom du nouveau diagramme :",
   "filetree.promptRename": "Nouveau nom :",
   "filetree.confirmDelete": "Supprimer définitivement « {name} » ?",
+
   "preview.zoomIn": "Zoomer",
   "preview.zoomOut": "Dézoomer",
   "preview.resetZoom": "Zoom 100 %",
@@ -69,11 +75,13 @@
   "toast.layoutTooLarge": "Diagramme trop grand pour l’optimisation automatique.",
   "preview.resetLayout": "Annuler tous les déplacements",
   "preview.duration": "Généré en {ms} ms",
+
   "errors.title": "Erreur de génération",
   "errors.gotoLine": "Ligne {line}",
   "errors.warningsTitle": "À corriger dans le diagramme",
   "errors.redundantAssociation": "« {actor} » hérite de « {ancestor} » : sa flèche vers « {useCase} » est redondante, l'héritage la lui donne déjà.",
   "errors.unknown": "Erreur inconnue.",
+
   "env.title": "Diagnostic de l'environnement",
   "env.checking": "Vérification de l'environnement…",
   "env.java": "Java",
@@ -84,43 +92,16 @@
   "env.embedded": "embarqué",
   "env.system": "système",
   "env.blocked": "L'application ne peut pas générer de diagrammes tant que ces points ne sont pas résolus.",
+
   "toast.saved": "« {name} » enregistré.",
   "toast.exported": "Export terminé : {path}",
   "toast.projectOpened": "Projet ouvert : {name}",
   "toast.fileCreated": "Fichier créé : {name}",
   "toast.fileDeleted": "Fichier supprimé : {name}",
   "toast.error": "Erreur : {message}",
+
   "common.cancel": "Annuler",
   "common.close": "Fermer",
   "common.yes": "Oui",
-  "common.no": "Non",
-  "analyze.open": "Analyser un texte",
-  "analyze.hint": "Décrivez le système en français ; l'application en tire les acteurs et leurs cas d'utilisation.",
-  "analyze.title": "Analyser une description textuelle",
-  "analyze.language": "Langue du texte",
-  "analyze.languageAuto": "Détection automatique ({detected})",
-  "analyze.lang.fr": "Français",
-  "analyze.lang.en": "Anglais",
-  "analyze.placeholder": "Décrivez le système en phrases courtes.\n\nPlateforme de réservation\nLe visiteur peut consulter le catalogue et créer un compte.\nLe client inscrit hérite du visiteur.\nLe client inscrit peut réserver une prestation.\nLe service de paiement est un service externe.",
-  "analyze.examplesTitle": "Tournures les mieux reconnues",
-  "analyze.example.story": "En tant que gestionnaire, je veux valider les réservations.",
-  "analyze.example.can": "Le visiteur peut consulter le catalogue et créer un compte.",
-  "analyze.example.allow": "Le système doit permettre au client de payer en ligne.",
-  "analyze.example.inherits": "Le client inscrit hérite du visiteur.",
-  "analyze.example.external": "Le service de paiement est un service externe.",
-  "analyze.example.includes": "Réserver une prestation inclut s'authentifier.",
-  "analyze.kind.system": "Système",
-  "analyze.kind.actor": "Acteurs",
-  "analyze.kind.inheritance": "Généralisations",
-  "analyze.kind.useCase": "Cas d'utilisation par acteur",
-  "analyze.kind.internalUseCase": "Cas sans acteur direct",
-  "analyze.kind.include": "Inclusions",
-  "analyze.kind.extend": "Extensions",
-  "analyze.fromLine": "ligne {line}",
-  "analyze.ignored": "Phrases laissées de côté",
-  "analyze.ignoredHint": "Rien n'en a été tiré : ni acteur ni action reconnus. Reformulez-les en phrases courtes, ou saisissez-les à la main dans l'assistant.",
-  "analyze.nothing": "Saisissez une description : les acteurs et leurs cas d'utilisation apparaîtront ici, chacun avec la phrase qui l'a produit.",
-  "analyze.proposalOnly": "Proposition à vérifier : rien n'est écrit avant votre validation dans l'assistant.",
-  "analyze.toAssistant": "Ouvrir dans l'assistant",
-  "analyze.needActor": "Aucun acteur n'a été reconnu : précisez qui fait quoi."
+  "common.no": "Non"
 }
