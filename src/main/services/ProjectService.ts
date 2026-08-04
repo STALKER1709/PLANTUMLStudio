@@ -2,7 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { PROJECT_FILE_EXTENSION, NEW_FILE_TEMPLATE } from '../../shared/constants';
-import type { Project, ProjectMeta, ProjectSettings } from '../../shared/types';
+import { layoutKey } from '../../shared/paths';
+import type {
+  LayoutOffset,
+  Project,
+  ProjectMeta,
+  ProjectSettings,
+} from '../../shared/types';
 import { logger } from '../utils/logger';
 
 const DEFAULT_SETTINGS: ProjectSettings = {
@@ -35,6 +41,7 @@ export class ProjectService {
       createdAt: now,
       updatedAt: now,
       settings: { ...DEFAULT_SETTINGS },
+      layouts: {},
     };
 
     const projectFilePath = path.join(rootPath, `${this.slugify(projectName)}${PROJECT_FILE_EXTENSION}`);
@@ -74,6 +81,7 @@ export class ProjectService {
       createdAt: now,
       updatedAt: now,
       settings: { ...DEFAULT_SETTINGS },
+      layouts: {},
     };
     const projectFilePath = path.join(
       target,
@@ -104,6 +112,9 @@ export class ProjectService {
       createdAt: parsed.createdAt ?? now,
       updatedAt: parsed.updatedAt ?? now,
       settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+      // Un projet écrit par une version antérieure n'a pas ce champ : il ne
+      // doit pas pour autant devenir illisible.
+      layouts: parsed.layouts ?? {},
     };
 
     return { rootPath, projectFilePath, meta };
@@ -115,10 +126,45 @@ export class ProjectService {
       ...project.meta,
       ...changes,
       settings: { ...project.meta.settings, ...(changes.settings ?? {}) },
+      layouts: changes.layouts ?? project.meta.layouts,
       updatedAt: new Date().toISOString(),
     };
     await this.writeMeta(project.projectFilePath, meta);
     return { ...project, meta };
+  }
+
+  /**
+   * Enregistre la disposition retouchée d'un fichier.
+   *
+   * Le chemin est ramené au relatif par `layoutKey`, partagé avec le renderer :
+   * les deux côtés doivent s'accorder au caractère près, sans quoi le projet
+   * enregistrerait sous une clef et relirait sous une autre. Un fichier situé
+   * hors du projet est ignoré.
+   *
+   * Une disposition vide retire l'entrée au lieu d'en écrire une : c'est ce que
+   * signifie « remettre à plat », et cela évite de gonfler le fichier projet de
+   * tables vides.
+   */
+  async saveLayout(
+    project: Project,
+    filePath: string,
+    offsets: Record<string, LayoutOffset>
+  ): Promise<Project> {
+    const clef = layoutKey(project.rootPath, filePath);
+    if (clef === null) return project;
+
+    const layouts = { ...project.meta.layouts };
+
+    if (Object.keys(offsets).length === 0) delete layouts[clef];
+    else layouts[clef] = offsets;
+
+    return this.updateProject(project, { layouts });
+  }
+
+  /** Disposition enregistrée pour un fichier, vide s'il n'en a pas. */
+  layoutOf(project: Project, filePath: string): Record<string, LayoutOffset> {
+    const clef = layoutKey(project.rootPath, filePath);
+    return clef === null ? {} : (project.meta.layouts[clef] ?? {});
   }
 
   /** Retourne le premier fichier `.plantumlproj` du dossier, sinon `null`. */

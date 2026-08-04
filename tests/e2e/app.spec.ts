@@ -10,6 +10,8 @@ const JAR = path.join(ROOT, 'resources/plantuml.jar');
 
 let app: ElectronApplication;
 let window: Page;
+/** Dossiers temporaires créés par les tests, effacés à la fin. */
+const dossiersTemporaires: string[] = [];
 
 test.beforeAll(async () => {
   test.skip(
@@ -27,6 +29,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await app?.close();
+  dossiersTemporaires.forEach((dossier) => fs.rmSync(dossier, { recursive: true, force: true }));
 });
 
 /**
@@ -57,6 +60,38 @@ async function reinitialiserDisposition(): Promise<void> {
  * Le bouton bascule, et les tests partagent la même fenêtre : cliquer sans
  * regarder l'état désactiverait l'édition laissée active par le test précédent.
  */
+/**
+ * Crée un projet neuf et l'ouvre dans l'application.
+ *
+ * Chaque test qui a besoin d'un projet en fabrique le sien : Playwright
+ * redémarre le worker après un échec, ce qui remet à zéro tout état partagé
+ * entre tests — un test qui dépendrait du précédent se retrouverait ignoré.
+ */
+async function creerProjet(): Promise<string> {
+  const racine = fs.mkdtempSync(path.join(os.tmpdir(), 'puml-projet-'));
+  dossiersTemporaires.push(racine);
+
+  // La boîte de dialogue système ne s'automatise pas : on lui substitue une
+  // réponse, ce qui laisse tout le reste du chemin s'exécuter réellement.
+  await app.evaluate(({ dialog }, directory) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] });
+  }, racine);
+
+  await window.locator('button', { hasText: /^Nouveau projet$/ }).click();
+  await expect(window.locator('.file-tree').getByText('01-premier-diagramme.puml')).toBeVisible({
+    timeout: 15_000,
+  });
+
+  return racine;
+}
+
+/** Chemin du `.plantumlproj` d'un projet créé par `creerProjet`. */
+function fichierProjet(racine: string): string {
+  const nom = fs.readdirSync(racine).find((entree) => entree.endsWith('.plantumlproj'));
+  if (!nom) throw new Error(`aucun fichier projet dans ${racine}`);
+  return path.join(racine, nom);
+}
+
 async function activerEdition(): Promise<void> {
   const bouton = window.locator('button', { hasText: /^Éditer$/ });
   if ((await bouton.getAttribute('aria-pressed')) !== 'true') await bouton.click();
@@ -674,6 +709,167 @@ test('les acteurs se rangent en colonnes, et le zoom ne l’efface pas', async (
     Array.from(document.querySelectorAll('.preview-stage svg g[data-entity][transform]')).length
   );
   expect(transformes, 'la disposition survit au zoom').toBeGreaterThan(0);
+});
+
+test('un projet se crée, et son arborescence se manipule', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const racineProjet = await creerProjet();
+
+  // Un projet s'amorce avec son fichier de projet et un premier diagramme.
+  expect(fs.readdirSync(racineProjet).some((nom) => nom.endsWith('.plantumlproj'))).toBe(true);
+  expect(fs.readdirSync(racineProjet)).toContain('01-premier-diagramme.puml');
+
+  const arbre = window.locator('.file-tree');
+
+  // Création : la saisie du nom passe par une invite de l'application.
+  await window.locator('button[title="Nouveau fichier"]').click();
+  await window.locator('.dialog input[type="text"]').fill('02-vue-metier');
+  await window.locator('.dialog button.primary').click();
+  await expect(arbre.getByText('02-vue-metier.puml')).toBeVisible({ timeout: 10_000 });
+  expect(fs.readdirSync(racineProjet)).toContain('02-vue-metier.puml');
+
+  // Renommage du fichier sélectionné.
+  await arbre.getByText('02-vue-metier.puml').click();
+  await window.locator('button[title="Renommer"]').click();
+  await window.locator('.dialog input[type="text"]').fill('02-vue-metier-v2');
+  await window.locator('.dialog button.primary').click();
+  await expect(arbre.getByText('02-vue-metier-v2.puml')).toBeVisible({ timeout: 10_000 });
+  expect(fs.readdirSync(racineProjet)).not.toContain('02-vue-metier.puml');
+
+  // Suppression.
+  await arbre.getByText('02-vue-metier-v2.puml').click();
+  await window.locator('button[title="Supprimer"]').click();
+  await window.locator('.dialog button.primary').click();
+  await expect(arbre.getByText('02-vue-metier-v2.puml')).toHaveCount(0, { timeout: 10_000 });
+  expect(fs.readdirSync(racineProjet)).not.toContain('02-vue-metier-v2.puml');
+});
+
+test('un déplacement survit à la fermeture du diagramme', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const racineProjet = await creerProjet();
+  const arbre = window.locator('.file-tree');
+  await arbre.getByText('01-premier-diagramme.puml').click();
+  await expect(window.locator('.preview-stage svg [data-participant]').first()).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await activerEdition();
+  await reinitialiserDisposition();
+
+  const boite = await window.locator('g[data-participant="Bob"]').first().boundingBox();
+  if (!boite) throw new Error('participant introuvable');
+  await window.mouse.move(boite.x + boite.width / 2, boite.y + boite.height / 2);
+  await window.mouse.down();
+  await window.mouse.move(boite.x + boite.width / 2 + 140, boite.y + boite.height / 2, {
+    steps: 8,
+  });
+  await window.mouse.up();
+
+  // La disposition est écrite dans le fichier projet, pas dans la source : le
+  // .puml reste un fichier PlantUML valide pour n'importe quel autre outil.
+  const projet = fichierProjet(racineProjet);
+  await expect
+    .poll(
+      () => {
+        const meta = JSON.parse(fs.readFileSync(projet, 'utf-8')) as {
+          layouts?: Record<string, Record<string, unknown>>;
+        };
+        return Object.keys(meta.layouts?.['01-premier-diagramme.puml'] ?? {}).length;
+      },
+      { timeout: 15_000 }
+    )
+    .toBeGreaterThan(0);
+  expect(fs.readFileSync(path.join(racineProjet, '01-premier-diagramme.puml'), 'utf-8')).not.toContain(
+    'layouts'
+  );
+
+  // On quitte le diagramme, puis on y revient : le déplacement est retrouvé.
+  await window.locator('button', { hasText: /^Nouveau diagramme$/ }).click();
+  await expect(window.locator('button[title="Annuler tous les déplacements"]')).toHaveCount(0);
+
+  await arbre.getByText('01-premier-diagramme.puml').click();
+  await expect(window.locator('button[title="Annuler tous les déplacements"]')).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test('un déplacement s’annule, isolément ou en bloc', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  await activerFormalisme();
+
+  const editor = window.locator('.monaco-editor');
+  await editor.click({ force: true });
+  await window.keyboard.press('Control+A');
+  await window.keyboard.type(
+    '@startuml\nclass UndoA\nclass UndoB\nUndoA -- UndoB\n@enduml'
+  );
+  await expect(window.locator('g.entity[data-entity="UndoA"]')).toBeVisible({ timeout: 30_000 });
+
+  await activerEdition();
+  await reinitialiserDisposition();
+
+  const deplacer = async (nom: string, dx: number) => {
+    const boite = await window.locator(`g.entity[data-entity="${nom}"]`).boundingBox();
+    if (!boite) throw new Error(`${nom} introuvable`);
+    await window.mouse.move(boite.x + boite.width / 2, boite.y + boite.height / 2);
+    await window.mouse.down();
+    await window.mouse.move(boite.x + boite.width / 2 + dx, boite.y + boite.height / 2 + 60, {
+      steps: 6,
+    });
+    await window.mouse.up();
+  };
+
+  await deplacer('UndoA', 150);
+  await deplacer('UndoB', -150);
+  const compteur = window.locator('button[title="Annuler tous les déplacements"]');
+  await expect(compteur).toHaveText('↺ 2');
+
+  // Un cran en arrière : le dernier déplacement seulement.
+  await window.locator('button[title="Annuler le dernier déplacement"]').click();
+  await expect(compteur).toHaveText('↺ 1');
+
+  // Double appui sur l'élément restant : il retrouve sa place, et il ne reste
+  // plus rien à remettre.
+  const restant = await window.locator('g.entity[data-entity="UndoA"]').boundingBox();
+  if (!restant) throw new Error('UndoA introuvable');
+  const cx = restant.x + restant.width / 2;
+  const cy = restant.y + restant.height / 2;
+  await window.mouse.click(cx, cy);
+  await window.mouse.click(cx, cy);
+  await expect(compteur).toHaveCount(0);
+});
+
+test('un diagramme et un projet entier s’exportent', async () => {
+  test.skip(!fs.existsSync(JAR), 'plantuml.jar absent : le rendu est impossible.');
+
+  const racineProjet = await creerProjet();
+  const svg = path.join(racineProjet, 'export-essai.svg');
+  await app.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, svg);
+
+  await window.locator('.file-tree').getByText('01-premier-diagramme.puml').click();
+  await expect(window.locator('.preview-stage svg')).toBeVisible({ timeout: 30_000 });
+
+  await window.locator('.toolbar select[aria-label="Format"]').selectOption('svg');
+  await window.locator('button', { hasText: /^Exporter$/ }).click();
+
+  await expect.poll(() => fs.existsSync(svg), { timeout: 30_000 }).toBe(true);
+  expect(fs.readFileSync(svg, 'utf-8')).toContain('<svg');
+
+  // Le projet entier part en archive, un rendu par diagramme.
+  const zip = path.join(racineProjet, 'projet-essai.zip');
+  await app.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, zip);
+
+  await window.locator('button', { hasText: /^Exporter le projet \(ZIP\)$/ }).click();
+  await expect.poll(() => fs.existsSync(zip), { timeout: 60_000 }).toBe(true);
+  // Signature d'une archive ZIP : « PK ».
+  expect(fs.readFileSync(zip).subarray(0, 2).toString('latin1')).toBe('PK');
 });
 
 test("l'application ne déclenche aucune requête réseau", async () => {

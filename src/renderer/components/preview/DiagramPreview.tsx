@@ -32,10 +32,18 @@ export interface DiagramPreviewProps {
   applyFormalism: boolean;
   /** Déplacements appliqués aux éléments du diagramme. */
   layoutOffsets: LayoutOffsets;
+  /** Ouvre un geste de déplacement, pour que l'annulation revienne d'un geste. */
+  onBeginMove(): void;
   onMoveElement(id: string, offset: Point): void;
   /** Reçoit la disposition trouvée, et de quoi en rendre compte. */
   onOptimizeLayout(result: OptimizeResult): void;
   onResetLayout(): void;
+  /** Remet un seul élément à sa place, sur double-clic. */
+  onResetElement(id: string): void;
+  /** Revient à l'état précédent de la disposition. */
+  onUndoLayout(): void;
+  /** `true` s'il reste un état antérieur à retrouver. */
+  canUndoLayout: boolean;
   onGotoLine(line: number): void;
   /** Remplace la source par sa version corrigée. */
   onCorrectSource(source: string): void;
@@ -52,9 +60,13 @@ export function DiagramPreview({
   enabled,
   applyFormalism,
   layoutOffsets,
+  onBeginMove,
   onMoveElement,
   onOptimizeLayout,
   onResetLayout,
+  onResetElement,
+  onUndoLayout,
+  canUndoLayout,
   onGotoLine,
   onCorrectSource,
 }: DiagramPreviewProps) {
@@ -83,7 +95,9 @@ export function DiagramPreview({
     offsets: layoutOffsets,
     enabled: isEditing,
     zoom,
+    onBeginMove,
     onMove: onMoveElement,
+    onReset: onResetElement,
   });
 
   const deplacements = Object.keys(layoutOffsets).length;
@@ -271,6 +285,11 @@ export function DiagramPreview({
         >
           {t('preview.optimize')}
         </button>
+        {canUndoLayout && (
+          <button type="button" onClick={onUndoLayout} title={t('preview.undoLayout')}>
+            ↶
+          </button>
+        )}
         {deplacements > 0 && (
           <button type="button" onClick={onResetLayout} title={t('preview.resetLayout')}>
             ↺ {deplacements}

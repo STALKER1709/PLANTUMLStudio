@@ -9,6 +9,7 @@ import type {
   ExportResult,
   FileNode,
   IpcResult,
+  LayoutOffset,
   Project,
   RenderResult,
   SaveFileResult,
@@ -185,6 +186,29 @@ export function registerIpcHandlers(context: IpcContext): void {
         const project = projectPath.endsWith(PROJECT_FILE_EXTENSION)
           ? await projects.readProject(projectPath)
           : await projects.openProject(projectPath);
+        setCurrentProject(context, project);
+        return ok(project);
+      } catch (error) {
+        return fail(error);
+      }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.SAVE_LAYOUT,
+    async (
+      _event,
+      filePath: string,
+      offsets: Record<string, LayoutOffset>
+    ): Promise<IpcResult<Project>> => {
+      try {
+        const current = getCurrentProject();
+        // Un brouillon, ou un fichier ouvert hors projet, n'a nulle part où
+        // ranger sa disposition : ce n'est pas une erreur, simplement un
+        // enregistrement sans destination.
+        if (!current) return ok(null as unknown as Project);
+
+        const project = await projects.saveLayout(current, filePath, offsets);
         setCurrentProject(context, project);
         return ok(project);
       } catch (error) {

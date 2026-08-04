@@ -18,6 +18,9 @@ const APPLIED_MARKER = 'data-puml-applied';
 /** Éléments saisissables, quel que soit le type de diagramme. */
 export const GRABBABLE = 'g[data-entity], g[data-participant]';
 
+/** Écart maximal entre deux appuis pour qu'ils comptent comme un double clic. */
+const DOUBLE_APPUI_MS = 400;
+
 export interface DiagramEditingOptions {
   /** Conteneur du SVG rendu. */
   stageRef: RefObject<HTMLDivElement | null>;
@@ -27,7 +30,11 @@ export interface DiagramEditingOptions {
   enabled: boolean;
   /** Facteur de zoom courant, pour convertir les pixels écran en unités SVG. */
   zoom: number;
+  /** Appelé à l'appui, avant le premier mouvement : borne l'annulation. */
+  onBeginMove(): void;
   onMove(id: string, offset: Point): void;
+  /** Remet un élément à la place calculée par PlantUML (double-clic). */
+  onReset(id: string): void;
 }
 
 /**
@@ -43,9 +50,13 @@ export function useDiagramEditing({
   offsets,
   enabled,
   zoom,
+  onBeginMove,
   onMove,
+  onReset,
 }: DiagramEditingOptions): void {
   const dragRef = useRef<DragState | null>(null);
+  /** Dernier élément saisi, pour reconnaître un double appui. */
+  const dernierAppui = useRef<{ id: string; temps: number } | null>(null);
   // Le glisser lit les décalages en cours sans réabonner ses écouteurs.
   const offsetsRef = useRef(offsets);
   offsetsRef.current = offsets;
@@ -101,12 +112,32 @@ export function useDiagramEditing({
       event.stopPropagation();
       event.preventDefault();
 
+      // Double appui sur le même élément : il retrouve la place que PlantUML
+      // lui avait donnée. La détection se fait ici et non sur `dblclick` :
+      // `preventDefault()` ci-dessus supprime les événements souris de
+      // compatibilité dont `dblclick` fait partie, qui ne serait jamais reçu.
+      const maintenant = event.timeStamp;
+      const precedent = dernierAppui.current;
+      dernierAppui.current = { id, temps: maintenant };
+
+      if (
+        precedent !== null &&
+        precedent.id === id &&
+        maintenant - precedent.temps < DOUBLE_APPUI_MS &&
+        offsetsRef.current[id] !== undefined
+      ) {
+        dernierAppui.current = null;
+        onReset(id);
+        return;
+      }
+
       dragRef.current = {
         id,
         origin: { x: event.clientX, y: event.clientY },
         base: offsetsRef.current[id] ?? { x: 0, y: 0 },
         horizontal: participant !== null && participant !== undefined,
       };
+      onBeginMove();
       group.classList.add('dragging');
       stage.setPointerCapture(event.pointerId);
     };
@@ -147,5 +178,5 @@ export function useDiagramEditing({
       stage.removeEventListener('pointerup', handleUp, true);
       stage.removeEventListener('pointercancel', handleUp, true);
     };
-  }, [enabled, svgMarkup, stageRef, rootSvg, onMove]);
+  }, [enabled, svgMarkup, stageRef, rootSvg, onBeginMove, onMove, onReset]);
 }

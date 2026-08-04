@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import type { FileNode, Project } from '../../shared/types';
+import { layoutKey } from '../../shared/paths';
 import { translate } from '../i18n';
 import { useEditorStore } from './editorStore';
 import { useSettingsStore } from './settingsStore';
@@ -15,6 +16,8 @@ interface ProjectState {
   createProject(): Promise<void>;
   refreshTree(): Promise<void>;
   openFile(filePath: string): Promise<void>;
+  /** Remplace le projet en mémoire — après enregistrement d'une disposition. */
+  setProject(project: Project): void;
   saveCurrentFile(): Promise<void>;
   saveCurrentFileAs(): Promise<void>;
   createFile(directory: string, fileName: string): Promise<void>;
@@ -32,6 +35,18 @@ function notifyError(message: string): void {
 
 function fileName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() ?? filePath;
+}
+
+/**
+ * Disposition que le projet a conservée pour un fichier.
+ *
+ * Hors projet — un brouillon, un fichier ouvert ailleurs — il n'y a rien à
+ * restaurer : le diagramme s'affiche tel que PlantUML le calcule.
+ */
+function dispositionDe(project: Project | null, filePath: string): Record<string, { x: number; y: number }> {
+  if (!project) return {};
+  const clef = layoutKey(project.rootPath, filePath);
+  return clef === null ? {} : (project.meta.layouts[clef] ?? {});
 }
 
 export const useProjectStore = create<ProjectState>()((set, get) => ({
@@ -88,13 +103,17 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set({ tree: result.data });
   },
 
+  setProject: (project) => set({ project }),
+
   openFile: async (filePath) => {
     const result = await window.electronAPI.readFile(filePath);
     if (!result.ok || result.data === undefined) {
       notifyError(result.error ?? t('errors.unknown'));
       return;
     }
-    useEditorStore.getState().openFile(filePath, result.data);
+    // La disposition retouchée est rangée dans le projet, indexée par chemin
+    // relatif : c'est ici qu'on la retrouve pour la remettre en place.
+    useEditorStore.getState().openFile(filePath, result.data, dispositionDe(get().project, filePath));
   },
 
   saveCurrentFile: async () => {

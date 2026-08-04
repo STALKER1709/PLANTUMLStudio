@@ -12,6 +12,7 @@ export const IPC_CHANNELS = {
   OPEN_PROJECT: 'project:open',
   CREATE_PROJECT: 'project:create',
   READ_PROJECT: 'project:read',
+  SAVE_LAYOUT: 'project:saveLayout',
 
   // Fichiers
   LIST_FILES: 'file:list',

@@ -40,12 +40,33 @@ export interface ProjectSettings {
   exportDirectory: string;
 }
 
+/** Décalage appliqué à un élément du rendu, en unités du SVG. */
+export interface LayoutOffset {
+  x: number;
+  y: number;
+}
+
+/**
+ * Déplacements du rendu conservés par le projet.
+ *
+ * Indexés par chemin de fichier **relatif au projet** — un chemin absolu
+ * rendrait le projet intransportable —, puis par identifiant d'élément.
+ */
+export type ProjectLayouts = Record<string, Record<string, LayoutOffset>>;
+
 export interface ProjectMeta {
   name: string;
   version: string;
   createdAt: string;
   updatedAt: string;
   settings: ProjectSettings;
+  /**
+   * Dispositions retouchées à la souris, par fichier.
+   *
+   * Elles vivent dans le projet et non dans la source : un `.puml` reste un
+   * fichier PlantUML valide, lisible par n'importe quel autre outil.
+   */
+  layouts: ProjectLayouts;
 }
 
 export interface Project {
@@ -146,6 +167,11 @@ export interface ElectronAPI {
   openProject(): Promise<IpcResult<Project>>;
   createProject(): Promise<IpcResult<Project>>;
   readProject(projectPath: string): Promise<IpcResult<Project>>;
+  /** Enregistre la disposition retouchée d'un fichier dans le projet ouvert. */
+  saveLayout(
+    filePath: string,
+    offsets: Record<string, LayoutOffset>
+  ): Promise<IpcResult<Project>>;
 
   listProjectFiles(projectPath: string): Promise<IpcResult<FileNode>>;
   readFile(filePath: string): Promise<IpcResult<string>>;

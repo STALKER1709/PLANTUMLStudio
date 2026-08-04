@@ -16,6 +16,7 @@ const CHANNELS = {
   OPEN_PROJECT: 'project:open',
   CREATE_PROJECT: 'project:create',
   READ_PROJECT: 'project:read',
+  SAVE_LAYOUT: 'project:saveLayout',
   LIST_FILES: 'file:list',
   READ_FILE: 'file:read',
   SAVE_FILE: 'file:save',
@@ -38,6 +39,8 @@ const api: ElectronAPI = {
   openProject: () => ipcRenderer.invoke(CHANNELS.OPEN_PROJECT),
   createProject: () => ipcRenderer.invoke(CHANNELS.CREATE_PROJECT),
   readProject: (projectPath: string) => ipcRenderer.invoke(CHANNELS.READ_PROJECT, projectPath),
+  saveLayout: (filePath: string, offsets: Record<string, { x: number; y: number }>) =>
+    ipcRenderer.invoke(CHANNELS.SAVE_LAYOUT, filePath, offsets),
 
   listProjectFiles: (projectPath: string) => ipcRenderer.invoke(CHANNELS.LIST_FILES, projectPath),
   readFile: (filePath: string) => ipcRenderer.invoke(CHANNELS.READ_FILE, filePath),

@@ -7,6 +7,7 @@ import { FileTree } from './components/file-tree/FileTree';
 import { ThreePanelLayout } from './components/layout/ThreePanelLayout';
 import { Toolbar } from './components/layout/Toolbar';
 import { DiagramPreview } from './components/preview/DiagramPreview';
+import { usePersistedLayout } from './hooks/usePersistedLayout';
 import { useIpc } from './hooks/useIpc';
 import { useTranslation } from './i18n';
 import { useEditorStore } from './store/editorStore';
@@ -30,15 +31,22 @@ export function App() {
   const requestRevealLine = useEditorStore((state) => state.requestRevealLine);
   const consumeRevealLine = useEditorStore((state) => state.consumeRevealLine);
   const layoutOffsets = useEditorStore((state) => state.layoutOffsets);
+  const beginMove = useEditorStore((state) => state.beginMove);
   const moveElement = useEditorStore((state) => state.moveElement);
   const applyLayout = useEditorStore((state) => state.applyLayout);
   const resetLayout = useEditorStore((state) => state.resetLayout);
+  const resetElement = useEditorStore((state) => state.resetElement);
+  const undoLayout = useEditorStore((state) => state.undoLayout);
+  const canUndoLayout = useEditorStore((state) => state.layoutHistory.length > 0);
 
   const saveCurrentFile = useProjectStore((state) => state.saveCurrentFile);
   const saveCurrentFileAs = useProjectStore((state) => state.saveCurrentFileAs);
 
   const environment = useIpc(() => window.electronAPI.checkEnvironment(), []);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Les déplacements du rendu sont conservés par le projet, pas par la source.
+  usePersistedLayout();
 
   useEffect(() => {
     applyTheme(theme);
@@ -142,9 +150,13 @@ export function App() {
             enabled={autoRender}
             applyFormalism={applyFormalism}
             layoutOffsets={layoutOffsets}
+            onBeginMove={beginMove}
             onMoveElement={moveElement}
             onOptimizeLayout={handleOptimizeLayout}
             onResetLayout={resetLayout}
+            onResetElement={resetElement}
+            onUndoLayout={undoLayout}
+            canUndoLayout={canUndoLayout}
             onGotoLine={requestRevealLine}
             onCorrectSource={setContent}
           />
