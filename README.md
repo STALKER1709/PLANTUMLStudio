@@ -86,18 +86,19 @@ npm run test:e2e         # tests de bout en bout (Playwright + Electron, après 
 npm run verify:offline   # échoue si un appel réseau apparaît dans src/
 npm run package:win      # installateur NSIS (.exe)
 npm run package:mac      # image disque (.dmg)
-npm run package:linux    # paquets .deb, .rpm et AppImage
+npm run package:linux    # paquets .deb, AppImage et .rpm (ce dernier exige rpmbuild)
 ```
 
 ## Poids des artefacts
 
-Mesuré sur un build réel (Linux, `.deb`, sans JRE embarqué) :
+Mesuré sur un build réel en version 0.9.0 (Linux, sans JRE embarqué) :
 
 | Élément | Taille |
 | --- | --- |
-| Paquet `.deb` complet | 120 Mo |
-| dont `plantuml.jar` | 21,5 Mo |
-| `app.asar` (code applicatif) | 18 Mo |
+| Paquet `.deb` complet | 119 Mo |
+| AppImage | 119 Mo |
+| dont `plantuml.jar` | 22,6 Mo |
+| `app.asar` (code applicatif) | 18,9 Mo |
 | JRE Temurin embarqué, si ajouté | ≈ 35 Mo compressés |
 
 Les paquets utilisés uniquement par le renderer (Monaco, React, Zustand) sont en
@@ -194,21 +195,22 @@ npm run build && npm run test:e2e
 Les tests de bout en bout se désactivent d'eux-mêmes si `dist/` ou `resources/plantuml.jar`
 sont absents, afin de ne pas transformer une ressource manquante en échec de suite.
 
-## Mises à jour hors ligne
+## Construire et diffuser
+
+| Plateforme | Commande | État |
+| --- | --- | --- |
+| Linux | `npm run package:linux` | `.deb` et AppImage construits et mesurés ; `.rpm` exige `rpmbuild` |
+| Windows | `npm run package:win` | **non vérifié** |
+| macOS | `npm run package:mac` | **non vérifié** |
+
+Les deux dernières lignes ne sont pas une omission : ces cibles n'ont jamais été construites
+ici, faute de Wine et d'une machine macOS. Le détail — l'échec `EPERM` rapporté sous Windows,
+l'état du JRE embarqué, l'absence de signature et ce qu'elle change pour l'utilisateur — est
+dans [`docs/distribution.md`](docs/distribution.md). Les versions et ce qui reste ouvert sont
+dans [`CHANGELOG.md`](CHANGELOG.md).
 
 Aucune mise à jour automatique : elle supposerait un accès réseau. La diffusion se fait par
-installateur transmis hors ligne (clé USB, partage local). `scripts/download-plantuml.js`
-affiche l'empreinte SHA-256 du JAR téléchargé ; conservez-la pour vérifier l'intégrité d'un
-paquet transmis par un canal non fiable.
-
-## Licences des composants tiers
-
-- PlantUML : LGPL / GPL / MIT selon la distribution retenue
-- Eclipse Temurin (JRE) : GPLv2 with Classpath Exception
-- Graphviz : Eclipse Public License 1.0
-- Monaco Editor, React, Electron : MIT
-
-Vérifiez ces conditions avant toute redistribution commerciale.
+installateur transmis hors ligne (clé USB, partage local).
 
 ## Licence
 

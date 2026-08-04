@@ -26,6 +26,24 @@ import {
  * La garde contre les cycles n'est pas théorique : rien n'empêche de saisir
  * « A hérite de B » et « B hérite de A » dans le formulaire.
  */
+/**
+ * Commentaire qui explique une flèche non écrite.
+ *
+ * Une flèche absente sans explication se relit comme un oubli, et se réécrit à
+ * l'identique six mois plus tard. Le texte suit la langue de l'interface : il
+ * s'adresse au lecteur, pas au moteur.
+ */
+function commentaireHeritage(
+  acteur: string,
+  ancetre: string,
+  cas: string[],
+  language: 'fr' | 'en'
+): string {
+  return language === 'en'
+    ? `' ${acteur} inherits from ${ancetre}: ${cas.join(', ')} — already carried by the ancestor.`
+    : `' ${acteur} hérite de ${ancetre} : ${cas.join(', ')} — déjà porté(s) par l'ancêtre.`;
+}
+
 function ancetres(acteur: string, parent: ReadonlyMap<string, string>): string[] {
   const chaine: string[] = [];
   const vus = new Set<string>([acteur]);
@@ -141,7 +159,7 @@ const casUtilisation: AssistantSchema = {
       ],
     },
   ],
-  build(title, values) {
+  build(title, values, language = 'fr') {
     const acteurs = filledRows(this.sections[1], values);
 
     // Un cas cité par plusieurs acteurs reste UN cas : la table est indexée
@@ -237,7 +255,7 @@ const casUtilisation: AssistantSchema = {
 
       if (herites.length > 0) {
         heritages.push(
-          `' ${nom} hérite de ${parent.get(nom)} : ${herites.join(', ')} — déjà porté(s) par l'ancêtre.`
+          commentaireHeritage(nom, parent.get(nom) as string, herites, language)
         );
       }
     });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useIpc } from '../../hooks/useIpc';
+import { textOf } from '../../assistant/libelles';
 import { useTranslation } from '../../i18n';
 import { useToastStore } from '../../store/toastStore';
 import { PromptDialog } from './PromptDialog';
@@ -17,7 +18,7 @@ export interface DiagramTypeSelectorProps {
  * modifications non enregistrées.
  */
 export function DiagramTypeSelector({ isDirty, onInsert }: DiagramTypeSelectorProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const templates = useIpc(() => window.electronAPI.listTemplates(), []);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -49,8 +50,10 @@ export function DiagramTypeSelector({ isDirty, onInsert }: DiagramTypeSelectorPr
       >
         <option value="">{t('toolbar.templatePlaceholder')}</option>
 
-        {/* Les 14 diagrammes UML se rangent en deux familles : les regrouper
-            évite une liste plate de 14 entrées difficile à parcourir. */}
+        {/* Les diagrammes se rangent par famille : les regrouper évite une
+            liste plate d'une quinzaine d'entrées difficile à parcourir. Les
+            libellés viennent des modèles, écrits en français, et sont traduits
+            à l'affichage comme ceux de l'assistant. */}
         {(['structurel', 'comportemental', 'planification'] as const).map((category) => {
           const group = items.filter((template) => template.category === category);
           if (group.length === 0) return null;
@@ -59,7 +62,7 @@ export function DiagramTypeSelector({ isDirty, onInsert }: DiagramTypeSelectorPr
             <optgroup key={category} label={t(`template.category.${category}`)}>
               {group.map((template) => (
                 <option key={template.id} value={template.id}>
-                  {template.label}
+                  {textOf(template.label, language)}
                 </option>
               ))}
             </optgroup>

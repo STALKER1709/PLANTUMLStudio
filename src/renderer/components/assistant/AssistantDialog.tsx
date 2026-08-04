@@ -11,7 +11,8 @@ import {
   type AssistantField,
   type AssistantSection,
 } from '../../assistant/model';
-import { useTranslation } from '../../i18n';
+import { textOf } from '../../assistant/libelles';
+import { useTranslation, type Language } from '../../i18n';
 
 export interface AssistantDialogProps {
   open: boolean;
@@ -31,7 +32,7 @@ export interface AssistantDialogProps {
  * l'assistant un moyen d'apprendre la syntaxe autant que de s'en passer.
  */
 export function AssistantDialog({ open, isDirty, onInsert, onCancel }: AssistantDialogProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [schemaId, setSchemaId] = useState(SCHEMAS[0].id);
   const [titre, setTitre] = useState('');
   const [valeurs, setValeurs] = useState<SectionValues>(() => initialValues(SCHEMAS[0]));
@@ -43,12 +44,12 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
 
   const source = useMemo(() => {
     try {
-      return schema.build(titre, valeurs);
+      return schema.build(titre, valeurs, language);
     } catch {
       // Une saisie incomplète ne doit jamais faire disparaître le formulaire.
       return '';
     }
-  }, [schema, titre, valeurs]);
+  }, [schema, titre, valeurs, language]);
 
   if (!open) return null;
 
@@ -104,7 +105,7 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
                 <optgroup key={famille} label={t(`template.category.${famille}`)}>
                   {SCHEMAS.filter((candidat) => candidat.category === famille).map((candidat) => (
                     <option key={candidat.id} value={candidat.id}>
-                      {candidat.label}
+                      {textOf(candidat.label, language)}
                     </option>
                   ))}
                 </optgroup>
@@ -117,7 +118,7 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
             <input
               type="text"
               value={titre}
-              placeholder={schema.label}
+              placeholder={textOf(schema.label, language)}
               onChange={(event) => setTitre(event.target.value)}
             />
           </label>
@@ -129,6 +130,7 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
               <SectionEditor
                 key={section.id}
                 section={section}
+                language={language}
                 lignes={valeurs[section.id] ?? []}
                 choixDe={choixDe}
                 onChange={modifier}
@@ -162,6 +164,7 @@ export function AssistantDialog({ open, isDirty, onInsert, onCancel }: Assistant
 
 interface SectionEditorProps {
   section: AssistantSection;
+  language: Language;
   lignes: Array<Record<string, string>>;
   choixDe(references: string | readonly string[] | undefined): string[];
   onChange(sectionId: string, index: number, champ: string, valeur: string): void;
@@ -173,6 +176,7 @@ interface SectionEditorProps {
 
 function SectionEditor({
   section,
+  language,
   lignes,
   choixDe,
   onChange,
@@ -183,16 +187,17 @@ function SectionEditor({
 }: SectionEditorProps) {
   return (
     <fieldset className="assistant-section">
-      <legend>{section.label}</legend>
-      {section.hint && <p className="assistant-aide">{section.hint}</p>}
+      <legend>{textOf(section.label, language)}</legend>
+      {section.hint && <p className="assistant-aide">{textOf(section.hint, language)}</p>}
 
       {lignes.map((ligne, index) => (
         <div className="assistant-ligne" key={index}>
           {section.fields.map((field) => (
             <label key={field.name} className={`assistant-champ champ-${field.kind}`}>
-              <span>{field.label}</span>
+              <span>{textOf(field.label, language)}</span>
               <FieldEditor
                 field={field}
+                language={language}
                 value={ligne[field.name] ?? ''}
                 choix={field.kind === 'reference' ? choixDe(field.references) : []}
                 onChange={(valeur) => onChange(section.id, index, field.name, valeur)}
@@ -220,18 +225,19 @@ function SectionEditor({
 
 interface FieldEditorProps {
   field: AssistantField;
+  language: Language;
   value: string;
   choix: string[];
   onChange(valeur: string): void;
 }
 
-function FieldEditor({ field, value, choix, onChange }: FieldEditorProps) {
+function FieldEditor({ field, language, value, choix, onChange }: FieldEditorProps) {
   if (field.kind === 'choice') {
     return (
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {field.options?.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {textOf(option.label, language)}
           </option>
         ))}
       </select>
@@ -256,7 +262,7 @@ function FieldEditor({ field, value, choix, onChange }: FieldEditorProps) {
       <textarea
         rows={3}
         value={value}
-        placeholder={field.placeholder}
+        placeholder={textOf(field.placeholder ?? '', language) || undefined}
         onChange={(event) => onChange(event.target.value)}
       />
     );
@@ -266,7 +272,7 @@ function FieldEditor({ field, value, choix, onChange }: FieldEditorProps) {
     <input
       type="text"
       value={value}
-      placeholder={field.placeholder}
+      placeholder={textOf(field.placeholder ?? '', language) || undefined}
       onChange={(event) => onChange(event.target.value)}
     />
   );

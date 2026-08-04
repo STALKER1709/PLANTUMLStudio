@@ -159,7 +159,7 @@ const SECTION_FERMETURES: AssistantSection = {
  * `wrap()` n'est pas utilisable ici : il encadre par `@startuml`, alors qu'un
  * Gantt se déclare par `@startgantt`. C'est le seul schéma dans ce cas.
  */
-function construireGantt(title: string, values: SectionValues): string {
+function construireGantt(title: string, values: SectionValues, language: 'fr' | 'en' = 'fr'): string {
   const projet = filledRows(SECTION_PROJET, values)[0];
 
   // Une phase n'est retenue que si sa période est complète et bien formée :
@@ -179,7 +179,9 @@ function construireGantt(title: string, values: SectionValues): string {
       phase.fin < phase.debut ? { ...phase, debut: phase.fin, fin: phase.debut } : phase
     );
 
-  const entete: string[] = ['language fr'];
+  // « language » ne francise que les mois et les jours portés par l'axe ; les
+  // mots-clefs de la syntaxe Gantt restent anglais dans tous les cas.
+  const entete: string[] = [`language ${language}`];
 
   const titre = title.trim() || (projet?.nom ?? '').trim();
   if (titre !== '') entete.push(`title ${titre}`);

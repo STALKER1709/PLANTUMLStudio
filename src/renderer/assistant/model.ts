@@ -64,8 +64,14 @@ export interface AssistantSchema {
   label: string;
   category: 'structurel' | 'comportemental' | 'planification';
   sections: ReadonlyArray<AssistantSection>;
-  /** Produit la source PlantUML à partir du titre et des lignes saisies. */
-  build(title: string, values: SectionValues): string;
+  /**
+   * Produit la source PlantUML à partir du titre et des lignes saisies.
+   *
+   * `language` ne concerne que les schémas qui écrivent de la prose dans la
+   * source — un commentaire d'explication, une directive de localisation. La
+   * syntaxe PlantUML, elle, est anglaise quoi qu'il arrive.
+   */
+  build(title: string, values: SectionValues, language?: 'fr' | 'en'): string;
 }
 
 /**

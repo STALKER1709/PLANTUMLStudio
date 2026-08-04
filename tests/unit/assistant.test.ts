@@ -19,6 +19,7 @@ import {
   wrap,
 } from '../../src/renderer/assistant/model';
 import { SCHEMAS, initialValues, schemaById } from '../../src/renderer/assistant/schemas';
+import { LIBELLES_EN, textOf } from '../../src/renderer/assistant/libelles';
 
 const ROOT = path.resolve(__dirname, '../..');
 const JAR = path.join(ROOT, 'resources/plantuml.jar');
@@ -549,5 +550,92 @@ describe('Diagramme de Gantt', () => {
       expect(phase.debut, phase.nom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(phase.fin, phase.nom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
+  });
+});
+
+describe('Traduction des libellés', () => {
+  /** Toutes les chaînes affichées par les schémas, dans leur version française. */
+  const affichees = new Set<string>();
+  SCHEMAS.forEach((schema) => {
+    affichees.add(schema.label);
+    schema.sections.forEach((section) => {
+      affichees.add(section.label);
+      if (section.hint) affichees.add(section.hint);
+      section.fields.forEach((field) => {
+        affichees.add(field.label);
+        if (field.placeholder) affichees.add(field.placeholder);
+        field.options?.forEach((option) => affichees.add(option.label));
+      });
+    });
+  });
+
+  it('ne contient aucune clef qui ne corresponde à un libellé réel', () => {
+    // Une apostrophe typographique recopiée de travers donnerait une entrée
+    // morte, sans que rien ne le signale à l'exécution.
+    const orphelines = Object.keys(LIBELLES_EN).filter((clef) => !affichees.has(clef));
+
+    expect(orphelines, `clefs sans libellé correspondant : ${orphelines.join(' | ')}`).toEqual([]);
+  });
+
+  it('traduit tout ce qui a une langue', () => {
+    // Ce qui reste en français est du contenu sans langue : identifiants,
+    // dates, cardinalités, fragments de code d'exemple.
+    const sansLangue = /^[\d\s.*+\-|/()]*$|^[A-Za-z]+$|[:=(]|\.jar$|\\n/;
+    const oubliees = [...affichees].filter(
+      (texte) => !(texte in LIBELLES_EN) && !sansLangue.test(texte)
+    );
+
+    expect(oubliees, `libellés sans traduction : ${oubliees.join(' | ')}`).toEqual([]);
+  });
+
+  it('rend le texte tel quel en français, et traduit en anglais', () => {
+    expect(textOf('Acteurs et leurs cas d’utilisation', 'fr')).toBe(
+      'Acteurs et leurs cas d’utilisation'
+    );
+    expect(textOf('Acteurs et leurs cas d’utilisation', 'en')).toBe('Actors and their use cases');
+  });
+
+  it('laisse passer une chaîne absente de la table', () => {
+    // Un libellé nouvellement ajouté doit rester lisible, pas disparaître.
+    expect(textOf('Libellé tout neuf', 'en')).toBe('Libellé tout neuf');
+  });
+});
+
+describe('Ce que l’assistant écrit suit la langue', () => {
+  it('explique en anglais la flèche qu’il n’écrit pas', () => {
+    const schema = schemaById('08-diagramme-cas-utilisation');
+    if (!schema) throw new Error('schéma introuvable');
+
+    const valeurs = {
+      systeme: [{ nom: 'Shop' }],
+      acteurs: [
+        { nom: 'Visitor', role: 'principal', herite: '', cas: 'Browse' },
+        { nom: 'Customer', role: 'principal', herite: 'Visitor', cas: 'Browse\nOrder' },
+      ],
+      casInternes: [],
+      relationsCas: [],
+    };
+
+    expect(schema.build('Shop', valeurs, 'en')).toContain(
+      "' Customer inherits from Visitor: Browse — already carried by the ancestor."
+    );
+    expect(schema.build('Shop', valeurs, 'fr')).toContain("déjà porté(s) par l'ancêtre.");
+  });
+
+  it('accorde la localisation du Gantt à l’interface', () => {
+    const schema = schemaById('15-diagramme-gantt');
+    if (!schema) throw new Error('schéma introuvable');
+
+    const valeurs = {
+      projet: [{ nom: 'Plan', debut: '', echelle: 'weekly' }],
+      taches: [{ nom: 'Study', debut: '2026-01-05', fin: '2026-01-16', avancement: '' }],
+      jalons: [],
+      fermetures: [],
+    };
+
+    expect(schema.build('', valeurs, 'en')).toContain('language en');
+    expect(schema.build('', valeurs, 'fr')).toContain('language fr');
+    // La syntaxe, elle, reste anglaise dans les deux cas.
+    expect(schema.build('', valeurs, 'fr')).toContain('starts 2026-01-05 and ends 2026-01-16');
   });
 });
